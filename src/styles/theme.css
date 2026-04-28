@@ -1,0 +1,15 @@
+:root {
+  --background: #0f1117;
+  --surface: #1a1d27;
+  --surface-alt: #22263a;
+  --border: #2e3248;
+  --text: #e2e8f0;
+  --text-muted: #8892a4;
+  --brand: #5865f2;
+  --brand-hover: #4752c4;
+  --success: #3ba55c;
+  --warning: #faa61a;
+  --danger: #ed4245;
+  --radius: 8px;
+  --radius-sm: 4px;
+}

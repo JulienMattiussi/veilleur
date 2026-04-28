@@ -1,0 +1,76 @@
+import nacl from "tweetnacl";
+
+export class DiscordVerificationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DiscordVerificationError";
+  }
+}
+
+export function verifyDiscordSignature(
+  rawBody: string,
+  signature: string,
+  timestamp: string,
+  publicKey: string,
+): boolean {
+  try {
+    const message = Buffer.from(timestamp + rawBody);
+    const sig = Buffer.from(signature, "hex");
+    const key = Buffer.from(publicKey, "hex");
+    return nacl.sign.detached.verify(message, sig, key);
+  } catch {
+    return false;
+  }
+}
+
+const DISCORD_API = "https://discord.com/api/v10";
+
+export type DiscordMessage = {
+  id: string;
+  content: string;
+  timestamp: string;
+  author: { username: string };
+};
+
+export async function fetchChannelMessages(
+  channelId: string,
+  after: string,
+  limit = 100,
+): Promise<DiscordMessage[]> {
+  const token = process.env.DISCORD_BOT_TOKEN;
+  if (!token) throw new Error("DISCORD_BOT_TOKEN is not set");
+
+  const url = `${DISCORD_API}/channels/${channelId}/messages?after=${after}&limit=${limit}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bot ${token}` },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Discord API error: ${res.status} ${res.statusText}`);
+  }
+
+  return res.json() as Promise<DiscordMessage[]>;
+}
+
+export async function fetchAllMessagesInPeriod(
+  channelId: string,
+  sinceDate: Date,
+): Promise<DiscordMessage[]> {
+  // Discord snowflake: shift timestamp left by 22 bits and add Discord epoch (2015-01-01)
+  const DISCORD_EPOCH = 1420070400000n;
+  const snowflake = (BigInt(sinceDate.getTime()) - DISCORD_EPOCH) << 22n;
+  const afterId = snowflake.toString();
+
+  const all: DiscordMessage[] = [];
+  let lastId = afterId;
+
+  while (true) {
+    const batch = await fetchChannelMessages(channelId, lastId, 100);
+    if (batch.length === 0) break;
+    all.push(...batch);
+    lastId = batch[batch.length - 1]!.id;
+    if (batch.length < 100) break;
+  }
+
+  return all;
+}
