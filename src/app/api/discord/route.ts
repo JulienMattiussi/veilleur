@@ -26,7 +26,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   if (body.type === APPLICATION_COMMAND && body.data?.name === "veille") {
-    // Acknowledge immediately — processing happens in a follow-up (deferred response)
+    // Acknowledge immediately - processing happens in a follow-up (deferred response)
     // The actual work is done in a background job that calls the Discord webhook
     void processVeilleCommand(body);
 

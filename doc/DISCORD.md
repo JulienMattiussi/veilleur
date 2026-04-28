@@ -24,7 +24,7 @@ Under **General Information → Interactions Endpoint URL**, set:
 https://your-domain.vercel.app/api/discord
 ```
 
-Discord will send a PING — the app must respond with PONG to validate.
+Discord will send a PING - the app must respond with PONG to validate.
 
 ## 4. Register the Slash Command
 

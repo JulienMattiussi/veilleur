@@ -18,7 +18,7 @@ export default function Home() {
         Veilleur
       </h1>
       <p style={{ color: "var(--text-muted)", marginBottom: "2rem" }}>
-        Bot Discord de veille technologique — extrait et synthétise les liens partagés dans vos
+        Bot Discord de veille technologique - extrait et synthétise les liens partagés dans vos
         canaux.
       </p>
       <div

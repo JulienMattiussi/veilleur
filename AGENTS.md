@@ -1,4 +1,4 @@
-# Veilleur — Conventions & Development Rules
+# Veilleur - Conventions & Development Rules
 
 ## Project overview
 
@@ -23,7 +23,7 @@ Run `make check` (format-check + lint + typecheck + test-unit). All must pass.
 ### Unit tests (`tests/unit/`)
 
 - Use **Vitest** with `globals: true`
-- No network calls — mock at module boundaries
+- No network calls - mock at module boundaries
 - All parsing/extraction functions must be **pure and independently testable**
 - Mock `fetch` globally in `beforeEach`: `vi.stubGlobal("fetch", vi.fn())`
 
@@ -31,7 +31,7 @@ Run `make check` (format-check + lint + typecheck + test-unit). All must pass.
 
 - Use **Vitest + @testing-library/react**
 - `"use client"` components only
-- jsdom quirks — stub at module level:
+- jsdom quirks - stub at module level:
   ```ts
   Object.assign(URL, { createObjectURL: vi.fn(() => "blob:fake"), revokeObjectURL: vi.fn() })
   ```
@@ -43,15 +43,19 @@ Run `make check` (format-check + lint + typecheck + test-unit). All must pass.
 
 ---
 
+## Writing rules
+
+- **Never use em dashes** (the `&mdash;` / Unicode U+2014 character) anywhere - use regular hyphens (`-`) instead
+
 ## TypeScript & code style
 
-- **Strict TypeScript** — no implicit `any`, `noUncheckedIndexedAccess` enabled
+- **Strict TypeScript** - no implicit `any`, `noUncheckedIndexedAccess` enabled
 - **Module resolution**: bundler, ESM modules
 - **Path alias**: `@/*` → `./src/*`
 - **Code & comments in English**, UI copy in French
-- **No hardcoded colors** — always use `var(--token)` from `src/styles/theme.css`
-- **No Tailwind** — all styling via inline styles + CSS custom properties
-- **No speculative abstractions** — don't add helpers not required by the current task
+- **No hardcoded colors** - always use `var(--token)` from `src/styles/theme.css`
+- **No Tailwind** - all styling via inline styles + CSS custom properties
+- **No speculative abstractions** - don't add helpers not required by the current task
 
 ---
 
@@ -98,15 +102,15 @@ Run once with `make discord-register` (requires env vars).
 - Batch all URLs in a single prompt (not one request per URL)
 - Response format: `[{"url":"...","title":"...","summary":"...","tags":[...]}]`
 - Gracefully handle JSON parse failures (fall back to URL as title)
-- Never call Anthropic SDK directly in route handlers — always go through `summarizeLinks()`
+- Never call Anthropic SDK directly in route handlers - always go through `summarizeLinks()`
 
 ---
 
 ## Cache (`src/lib/cache.ts`)
 
-- All Redis reads/writes through `src/lib/cache.ts` — never call `ioredis` directly in routes
+- All Redis reads/writes through `src/lib/cache.ts` - never call `ioredis` directly in routes
 - In-memory `Map` fallback on `global._localStore` when `REDIS_URL` is absent (local dev, survives HMR)
-- Cache key: `report:{channelId}:{period}` — TTL 6 hours
+- Cache key: `report:{channelId}:{period}` - TTL 6 hours
 
 ---
 
