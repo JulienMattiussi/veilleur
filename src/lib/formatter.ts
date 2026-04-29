@@ -41,6 +41,7 @@ export function buildSelectComponents(
   channelId: string,
   period: string,
   page = 0,
+  basketCount = 0,
 ): unknown[] {
   const totalPages = Math.ceil(links.length / config.report.linksPerPage);
   const pageLinks = links.slice(
@@ -66,7 +67,7 @@ export function buildSelectComponents(
         {
           type: 3, // STRING_SELECT
           custom_id: `veille_select:${channelId}:${period}`,
-          placeholder: "Sélectionne jusqu'à 6 liens à garder",
+          placeholder: "Sélectionne les liens à garder",
           min_values: 1,
           max_values: Math.min(config.report.maxSelectedLinks, options.length),
           options,
@@ -75,26 +76,38 @@ export function buildSelectComponents(
     },
   ];
 
+  const buttons: unknown[] = [];
+
   if (totalPages > 1) {
-    components.push({
-      type: 1, // ACTION_ROW
-      components: [
-        {
-          type: 2, // BUTTON
-          style: 2, // SECONDARY
-          label: "◀ Précédent",
-          custom_id: `veille_page:${channelId}:${period}:${page - 1}`,
-          disabled: page === 0,
-        },
-        {
-          type: 2,
-          style: 2,
-          label: "Suivant ▶",
-          custom_id: `veille_page:${channelId}:${period}:${page + 1}`,
-          disabled: page === totalPages - 1,
-        },
-      ],
+    buttons.push(
+      {
+        type: 2, // BUTTON
+        style: 2, // SECONDARY
+        label: "◀ Précédent",
+        custom_id: `veille_page:${channelId}:${period}:${page - 1}`,
+        disabled: page === 0,
+      },
+      {
+        type: 2,
+        style: 2,
+        label: "Suivant ▶",
+        custom_id: `veille_page:${channelId}:${period}:${page + 1}`,
+        disabled: page === totalPages - 1,
+      },
+    );
+  }
+
+  if (basketCount > 0) {
+    buttons.push({
+      type: 2,
+      style: 1, // PRIMARY
+      label: `Valider (${basketCount} lien${basketCount > 1 ? "s" : ""})`,
+      custom_id: `veille_validate:${channelId}:${period}`,
     });
+  }
+
+  if (buttons.length > 0) {
+    components.push({ type: 1, components: buttons });
   }
 
   return components;
