@@ -44,6 +44,20 @@ describe("extractLinks", () => {
     expect(links).toHaveLength(0);
   });
 
+  it("ignores direct image links", () => {
+    const links = extractLinks([
+      makeMessage("https://example.com/photo.jpg"),
+      makeMessage("https://example.com/image.PNG"),
+      makeMessage("https://example.com/anim.gif?size=large"),
+    ]);
+    expect(links).toHaveLength(0);
+  });
+
+  it("does not ignore pages that happen to have image-like words in path", () => {
+    const links = extractLinks([makeMessage("https://example.com/blog/my-png-guide")]);
+    expect(links).toHaveLength(1);
+  });
+
   it("returns author and timestamp from the source message", () => {
     const msg: DiscordMessage = {
       id: "42",

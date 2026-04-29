@@ -11,12 +11,14 @@ export type ExtractedLink = {
 
 const URL_REGEX = /https?:\/\/[^\s<>"']+/g;
 
+const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|webp|svg|bmp|ico|tiff?|avif)(\?.*)?$/i;
+
 function isIgnored(url: string): boolean {
   try {
-    const { hostname } = new URL(url);
-    return config.ignoredDomains.some(
-      (domain) => hostname === domain || hostname.endsWith(`.${domain}`),
-    );
+    const { hostname, pathname } = new URL(url);
+    if (config.ignoredDomains.some((d) => hostname === d || hostname.endsWith(`.${d}`))) return true;
+    if (IMAGE_EXTENSIONS.test(pathname)) return true;
+    return false;
   } catch {
     return true;
   }
