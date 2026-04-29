@@ -80,6 +80,9 @@ export async function editFollowUp(
   });
 }
 
+const MAX_PAGES = 5; // max 500 messages per run
+const PAGE_DELAY_MS = 400; // proactive delay between pages to avoid rate limits
+
 export async function fetchAllMessagesInPeriod(
   channelId: string,
   sinceDate: Date,
@@ -92,7 +95,8 @@ export async function fetchAllMessagesInPeriod(
   const all: DiscordMessage[] = [];
   let lastId = afterId;
 
-  while (true) {
+  for (let page = 0; page < MAX_PAGES; page++) {
+    if (page > 0) await sleep(PAGE_DELAY_MS);
     const batch = await fetchChannelMessages(channelId, lastId, 100);
     if (batch.length === 0) break;
     all.push(...batch);
