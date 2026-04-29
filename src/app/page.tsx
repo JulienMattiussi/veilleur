@@ -7,12 +7,20 @@ export default function Home() {
         padding: "2rem 1rem",
       }}
     >
+      <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+        <img
+          src="/logo.jpeg"
+          alt="Veilleur"
+          style={{ width: 120, height: 120, borderRadius: 24 }}
+        />
+      </div>
       <h1
         style={{
           fontSize: "2rem",
           fontWeight: 700,
           marginBottom: "0.5rem",
           color: "var(--brand)",
+          textAlign: "center",
         }}
       >
         Veilleur
