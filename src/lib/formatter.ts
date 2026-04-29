@@ -23,9 +23,12 @@ export function formatReport(
     const description = l.summary || l.context;
     const body = description ? `\n${description}` : "";
     // When no title from Claude, derive a short one from the URL (hostname + first path segment)
-    const displayTitle =
-      l.title === l.url ? shortTitle(l.url) : l.title;
-    return `**[${displayTitle}](<${l.url}>)**${body}${tags}`;
+    const displayTitle = l.title === l.url ? shortTitle(l.url) : l.title;
+    const date = new Date(l.timestamp).toLocaleDateString("fr-FR", {
+      day: "numeric",
+      month: "short",
+    });
+    return `**[${displayTitle}](<${l.url}>)** - ${date} *(${l.author})*${body}${tags}`;
   });
 
   const footer =
