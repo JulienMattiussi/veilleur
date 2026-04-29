@@ -3,7 +3,15 @@
     "allow": [
       "Bash(git init *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(ngrok version *)",
+      "Bash(npm install *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:7788/api/discord -X POST -H \"Content-Type: application/json\" -d '{\"type\":1}')",
+      "Bash(node -e \"const nacl = require\\('/home/julien/Documents/MyRepos/veilleur/node_modules/tweetnacl'\\); console.log\\(typeof nacl, typeof nacl.sign, typeof nacl.sign?.detached?.verify\\)\")",
+      "Bash(lsof -ti:7788)",
+      "Bash(xargs kill *)",
+      "Bash(fuser -k 7788/tcp)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:7788/api/discord -X POST -H \"Content-Type: application/json\" -H \"x-signature-ed25519: aabb\" -H \"x-signature-timestamp: 123\" -d '{\"type\":1}')"
     ]
   }
 }

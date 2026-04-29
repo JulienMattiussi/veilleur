@@ -17,7 +17,7 @@ export function verifyDiscordSignature(
     const message = Buffer.from(timestamp + rawBody);
     const sig = Buffer.from(signature, "hex");
     const key = Buffer.from(publicKey, "hex");
-    return nacl.sign.detached.verify(message, sig, key);
+    return nacl.sign.detached.verify(new Uint8Array(message), new Uint8Array(sig), new Uint8Array(key));
   } catch {
     return false;
   }
@@ -50,6 +50,19 @@ export async function fetchChannelMessages(
   }
 
   return res.json() as Promise<DiscordMessage[]>;
+}
+
+export async function editFollowUp(
+  applicationId: string,
+  token: string,
+  content: string,
+): Promise<void> {
+  const url = `${DISCORD_API}/webhooks/${applicationId}/${token}/messages/@original`;
+  await fetch(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content }),
+  });
 }
 
 export async function fetchAllMessagesInPeriod(

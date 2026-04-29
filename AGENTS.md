@@ -70,8 +70,9 @@ All Discord webhook calls must be verified with `verifyDiscordSignature()` from 
 
 1. Verify signature
 2. Respond to PING with PONG (type 1)
-3. For `/veille`: respond with `DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE` (type 5) immediately
+3. For `/veille`: respond with `DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE` (type 5) + `flags: 64` (ephemeral) immediately
 4. Process in the background, then POST to Discord follow-up webhook
+5. All responses are ephemeral (flag 64) - only the invoking user sees the result
 
 ### Reading channel messages
 
