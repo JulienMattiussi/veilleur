@@ -4,10 +4,11 @@ import { extractLinks } from "@/lib/link-extractor";
 import { summarizeLinks } from "@/lib/summarizer";
 import { getCachedReport, setCachedReport } from "@/lib/cache";
 import { parsePeriod, periodLabel } from "@/lib/period";
-import { formatReport } from "@/lib/formatter";
+import { formatReport, buildSelectComponents, formatCuratedList } from "@/lib/formatter";
 
 const PING = 1;
 const APPLICATION_COMMAND = 2;
+const MESSAGE_COMPONENT = 3;
 
 const PONG = 1;
 const CHANNEL_MESSAGE_WITH_SOURCE = 4;
@@ -20,8 +21,10 @@ type InteractionBody = {
   token?: string;
   application_id?: string;
   data?: {
-    name: string;
+    name?: string;
     options?: InteractionOption[];
+    custom_id?: string;
+    values?: string[];
   };
 };
 
@@ -46,7 +49,39 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ type: DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE, data: { flags: 64 } });
   }
 
-  return NextResponse.json({ type: CHANNEL_MESSAGE_WITH_SOURCE, data: { content: "Commande inconnue." } });
+  if (body.type === MESSAGE_COMPONENT && body.data?.custom_id?.startsWith("veille_select:")) {
+    return handleSelectComponent(body);
+  }
+
+  return NextResponse.json({
+    type: CHANNEL_MESSAGE_WITH_SOURCE,
+    data: { content: "Commande inconnue." },
+  });
+}
+
+async function handleSelectComponent(body: InteractionBody): Promise<NextResponse> {
+  const [, channelId, period] = (body.data?.custom_id ?? "").split(":");
+  const selectedIndices = (body.data?.values ?? []).map(Number);
+
+  const cached = await getCachedReport(channelId ?? "", period ?? "");
+  if (!cached) {
+    return NextResponse.json({
+      type: CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        flags: 64,
+        content: "Le rapport a expiré - relance `/veille` pour en générer un nouveau.",
+      },
+    });
+  }
+
+  const selectedLinks = selectedIndices
+    .map((i) => cached.links[i])
+    .filter((l): l is NonNullable<typeof l> => l !== undefined);
+
+  return NextResponse.json({
+    type: CHANNEL_MESSAGE_WITH_SOURCE,
+    data: { flags: 64, content: formatCuratedList(selectedLinks) },
+  });
 }
 
 async function processVeilleCommand(body: InteractionBody): Promise<void> {
@@ -65,7 +100,12 @@ async function processVeilleCommand(body: InteractionBody): Promise<void> {
   try {
     const cached = await getCachedReport(channelId, period);
     if (cached) {
-      await editFollowUp(application_id, token, formatReport(cached.links, period, periodLabel(period)));
+      await editFollowUp(
+        application_id,
+        token,
+        formatReport(cached.links, period, periodLabel(period)),
+        buildSelectComponents(cached.links, channelId, period),
+      );
       return;
     }
 
@@ -91,7 +131,12 @@ async function processVeilleCommand(body: InteractionBody): Promise<void> {
       links: summarized,
     });
 
-    await editFollowUp(application_id, token, formatReport(summarized, period, periodLabel(period)));
+    await editFollowUp(
+      application_id,
+      token,
+      formatReport(summarized, period, periodLabel(period)),
+      buildSelectComponents(summarized, channelId, period),
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : "erreur inconnue";
     await editFollowUp(application_id, token, `Erreur : ${message}`);

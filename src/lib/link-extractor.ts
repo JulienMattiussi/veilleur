@@ -16,7 +16,8 @@ const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|webp|svg|bmp|ico|tiff?|avif)(\?.*)?$/
 function isIgnored(url: string): boolean {
   try {
     const { hostname, pathname } = new URL(url);
-    if (config.ignoredDomains.some((d) => hostname === d || hostname.endsWith(`.${d}`))) return true;
+    if (config.ignoredDomains.some((d) => hostname === d || hostname.endsWith(`.${d}`)))
+      return true;
     if (IMAGE_EXTENSIONS.test(pathname)) return true;
     return false;
   } catch {
@@ -34,11 +35,7 @@ export function extractLinks(messages: DiscordMessage[]): ExtractedLink[] {
       const url = raw.replace(/[.,;:!?)]+$/, "");
       if (seen.has(url) || isIgnored(url)) continue;
       seen.add(url);
-      const context = msg.content
-        .replace(URL_REGEX, "")
-        .replace(/\s+/g, " ")
-        .trim()
-        .slice(0, 200);
+      const context = msg.content.replace(URL_REGEX, "").replace(/\s+/g, " ").trim().slice(0, 200);
 
       links.push({
         url,

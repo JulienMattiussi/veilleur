@@ -14,6 +14,7 @@
 ## 2. Invite the bot to your server
 
 Under **OAuth2 -> URL Generator**, select:
+
 - Scopes: `bot`, `applications.commands`
 - Bot Permissions: `Read Messages/View Channels` + `Read Message History`
 

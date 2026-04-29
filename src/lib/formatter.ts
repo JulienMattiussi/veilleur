@@ -32,11 +32,49 @@ function renderEntry(l: SummarizedLink, index: number): string {
   return `${index}. **[${displayTitle}](<${l.url}>)** - ${date} *(${l.author})*${body}${tags}`;
 }
 
-export function formatReport(
+export function getDisplayTitle(l: SummarizedLink): string {
+  return l.title === l.url ? shortTitle(l.url) : l.title;
+}
+
+export function buildSelectComponents(
   links: SummarizedLink[],
+  channelId: string,
   period: string,
-  periodLbl: string,
-): string {
+): unknown[] {
+  const options = links.slice(0, 25).map((l, i) => {
+    const label = getDisplayTitle(l).slice(0, 100);
+    const date = new Date(l.timestamp).toLocaleDateString("fr-FR", {
+      day: "numeric",
+      month: "short",
+    });
+    const description = `${domain(l.url)} - ${date} (${l.author})`.slice(0, 100);
+    return { label, value: String(i), description };
+  });
+
+  return [
+    {
+      type: 1, // ACTION_ROW
+      components: [
+        {
+          type: 3, // STRING_SELECT
+          custom_id: `veille_select:${channelId}:${period}`,
+          placeholder: "Sélectionne jusqu'à 6 liens à garder",
+          min_values: 1,
+          max_values: Math.min(config.report.maxSelectedLinks, options.length),
+          options,
+        },
+      ],
+    },
+  ];
+}
+
+export function formatCuratedList(links: SummarizedLink[]): string {
+  const month = new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  const lines = links.map((l) => `- [${getDisplayTitle(l)}](<${l.url}>)`).join("\n");
+  return `**Veille de ${month}**\n${lines}`;
+}
+
+export function formatReport(links: SummarizedLink[], period: string, periodLbl: string): string {
   const visible = links.slice(0, config.report.maxLinksDisplayed);
   const header = `**Veille - ${periodLbl}** - ${links.length} lien(s)\n`;
 
@@ -63,9 +101,10 @@ export function formatReport(
     displayed += groupLinks.length;
   }
 
-  const finalFooter = links.length - displayed > 0
-    ? `\n*...et ${links.length - displayed} autre(s) non affiché(s)*`
-    : "";
+  const finalFooter =
+    links.length - displayed > 0
+      ? `\n*...et ${links.length - displayed} autre(s) non affiché(s)*`
+      : "";
 
   return (header + body + finalFooter).trim();
 }

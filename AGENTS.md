@@ -33,7 +33,7 @@ Run `make check` (format-check + lint + typecheck + test-unit). All must pass.
 - `"use client"` components only
 - jsdom quirks - stub at module level:
   ```ts
-  Object.assign(URL, { createObjectURL: vi.fn(() => "blob:fake"), revokeObjectURL: vi.fn() })
+  Object.assign(URL, { createObjectURL: vi.fn(() => "blob:fake"), revokeObjectURL: vi.fn() });
   ```
 
 ### E2E tests (`tests/e2e/`)
@@ -117,23 +117,23 @@ Run once with `make discord-register` (requires env vars).
 
 ## Environment variables
 
-| Variable | Required | Purpose |
-|---|---|---|
-| `DISCORD_PUBLIC_KEY` | yes | Ed25519 webhook verification |
-| `DISCORD_APPLICATION_ID` | yes | Registering slash commands |
-| `DISCORD_BOT_TOKEN` | yes | Reading channel messages via REST |
-| `ANTHROPIC_API_KEY` | yes | Claude AI summarization |
-| `REDIS_URL` | no | Redis cache (in-memory fallback if absent) |
+| Variable                 | Required | Purpose                                    |
+| ------------------------ | -------- | ------------------------------------------ |
+| `DISCORD_PUBLIC_KEY`     | yes      | Ed25519 webhook verification               |
+| `DISCORD_APPLICATION_ID` | yes      | Registering slash commands                 |
+| `DISCORD_BOT_TOKEN`      | yes      | Reading channel messages via REST          |
+| `ANTHROPIC_API_KEY`      | yes      | Claude AI summarization                    |
+| `REDIS_URL`              | no       | Redis cache (in-memory fallback if absent) |
 
 ---
 
 ## Makefile commands
 
-| Command | Description |
-|---|---|
-| `make install` | Install npm deps + Playwright |
-| `make dev` | Start dev server on port 7788 |
-| `make start` / `make stop` | Background server |
-| `make check` | Full CI gate (format + lint + types + tests) |
-| `make discord-register` | Register `/veille` slash command (run once) |
-| `make clean` | Remove build artefacts |
+| Command                    | Description                                  |
+| -------------------------- | -------------------------------------------- |
+| `make install`             | Install npm deps + Playwright                |
+| `make dev`                 | Start dev server on port 7788                |
+| `make start` / `make stop` | Background server                            |
+| `make check`               | Full CI gate (format + lint + types + tests) |
+| `make discord-register`    | Register `/veille` slash command (run once)  |
+| `make clean`               | Remove build artefacts                       |

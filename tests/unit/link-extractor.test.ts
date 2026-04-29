@@ -24,10 +24,7 @@ describe("extractLinks", () => {
   });
 
   it("deduplicates identical URLs across messages", () => {
-    const msgs = [
-      makeMessage("https://example.com", "1"),
-      makeMessage("https://example.com", "2"),
-    ];
+    const msgs = [makeMessage("https://example.com", "1"), makeMessage("https://example.com", "2")];
     expect(extractLinks(msgs)).toHaveLength(1);
   });
 

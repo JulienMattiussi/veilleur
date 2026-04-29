@@ -13,6 +13,7 @@ Bot Discord de veille technologique. Lance `/veille` dans un canal, il parcourt 
 ```
 
 Le bot :
+
 1. Lit tous les messages du canal sur la période demandée
 2. Extrait les URLs (en ignorant les liens Discord, GIFs, CDN...)
 3. Récupère le contexte rédigé par l'auteur du message
@@ -45,13 +46,13 @@ make discord-register       # enregistre la commande /veille (une seule fois)
 
 Variables d'environnement :
 
-| Variable | Obligatoire | Description |
-|---|---|---|
-| `DISCORD_PUBLIC_KEY` | oui | Clé publique Ed25519 (Discord Developer Portal) |
-| `DISCORD_APPLICATION_ID` | oui | ID de l'application Discord |
-| `DISCORD_BOT_TOKEN` | oui | Token du bot Discord |
-| `ANTHROPIC_API_KEY` | non | Clé API Claude - active le résumé IA |
-| `REDIS_URL` | non | URL Redis Cloud - fallback in-memory si absent |
+| Variable                 | Obligatoire | Description                                     |
+| ------------------------ | ----------- | ----------------------------------------------- |
+| `DISCORD_PUBLIC_KEY`     | oui         | Clé publique Ed25519 (Discord Developer Portal) |
+| `DISCORD_APPLICATION_ID` | oui         | ID de l'application Discord                     |
+| `DISCORD_BOT_TOKEN`      | oui         | Token du bot Discord                            |
+| `ANTHROPIC_API_KEY`      | non         | Clé API Claude - active le résumé IA            |
+| `REDIS_URL`              | non         | URL Redis Cloud - fallback in-memory si absent  |
 
 ## Développement
 
@@ -81,6 +82,7 @@ Voir [doc/DEPLOY.md](doc/DEPLOY.md) pour le détail complet.
 ## Configuration Discord
 
 Voir [doc/DISCORD.md](doc/DISCORD.md) pour :
+
 - Créer l'application Discord
 - Inviter le bot sur un serveur
 - Donner accès aux canaux restreints

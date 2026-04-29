@@ -18,7 +18,11 @@ export function verifyDiscordSignature(
     const message = Buffer.from(timestamp + rawBody);
     const sig = Buffer.from(signature, "hex");
     const key = Buffer.from(publicKey, "hex");
-    return nacl.sign.detached.verify(new Uint8Array(message), new Uint8Array(sig), new Uint8Array(key));
+    return nacl.sign.detached.verify(
+      new Uint8Array(message),
+      new Uint8Array(sig),
+      new Uint8Array(key),
+    );
   } catch {
     return false;
   }
@@ -73,15 +77,15 @@ export async function editFollowUp(
   applicationId: string,
   token: string,
   content: string,
+  components?: unknown[],
 ): Promise<void> {
   const url = `${DISCORD_API}/webhooks/${applicationId}/${token}/messages/@original`;
   await fetch(url, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ content, ...(components ? { components } : {}) }),
   });
 }
-
 
 export async function fetchAllMessagesInPeriod(
   channelId: string,
