@@ -94,9 +94,15 @@ https://your-project.vercel.app/api/discord
 The bot responds with an ephemeral deferred message (only you see it), then edits it with the
 synthesized reading list once processing is complete.
 
-The report groups links by domain, numbered, with date and author. A select menu at the bottom
-lets you pick up to 6 links to keep. After confirming your selection, the bot replies with a
-clean curated list:
+The report groups links by domain, numbered, with date and author. If there are more than 15
+links, navigation buttons **◀ Précédent** / **Suivant ▶** let you browse pages.
+
+To build a curated list:
+
+1. On any page, open the select menu and pick the links you want to keep - the message updates
+   with a **Valider (N liens)** button showing your running total
+2. Navigate to other pages and add more links the same way (selections accumulate across pages)
+3. Click **Valider** - the bot posts the final curated list as a new message:
 
 ```
 Veille de avril 2026
@@ -104,5 +110,5 @@ Veille de avril 2026
 - [Another title](https://other.com)
 ```
 
-> Reports are cached for 6 hours (requires Redis in production). Re-running `/veille` with the
-> same canal and period within that window returns the cached report instantly.
+> Reports and baskets are cached for 6 hours (requires Redis in production). Re-running `/veille`
+> with the same canal and period within that window returns the cached report instantly.

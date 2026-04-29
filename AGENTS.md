@@ -71,8 +71,12 @@ All Discord webhook calls must be verified with `verifyDiscordSignature()` from 
 1. Verify signature
 2. Respond to PING with PONG (type 1)
 3. For `APPLICATION_COMMAND` `/veille`: respond with `DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE` (type 5) + `flags: 64` (ephemeral) immediately, then process in the background with `after()` from `next/server`
-4. For `MESSAGE_COMPONENT` (`veille_select:*`): respond synchronously with `CHANNEL_MESSAGE_WITH_SOURCE` (type 4) - no deferred needed
-5. All responses are ephemeral (flag 64) - only the invoking user sees the result
+4. For `MESSAGE_COMPONENT` (`veille_select:*`): add selected indices to the user's basket, respond with `UPDATE_MESSAGE` (type 7) - updates the report message in place
+5. For `MESSAGE_COMPONENT` (`veille_page:*`): navigate to the requested page, respond with `UPDATE_MESSAGE` (type 7) - basket count is preserved in the Valider button
+6. For `MESSAGE_COMPONENT` (`veille_validate:*`): read basket, post curated list as `CHANNEL_MESSAGE_WITH_SOURCE` (type 4), clear basket
+7. All responses are ephemeral (flag 64) - only the invoking user sees the result
+
+User ID is extracted from `body.member.user.id` (guild) or `body.user.id` (DM) to scope baskets per user.
 
 ### Reading channel messages
 
@@ -114,7 +118,8 @@ Run once with `make discord-register` (requires env vars).
 - All Redis reads/writes through `src/lib/cache.ts` - never call `ioredis` directly in routes
 - In-memory `Map` fallback on `global._localStore` when `REDIS_URL` is absent (local dev only - survives HMR but not across serverless instances)
 - **Redis is required in production**: without it the select menu always returns "rapport expiré" because each serverless invocation gets a fresh in-memory store
-- Cache key: `report:{channelId}:{period}` - TTL 6 hours
+- Report key: `report:{channelId}:{period}` - TTL 6 hours
+- Basket key: `basket:{channelId}:{period}:{userId}` - TTL 6 hours (same as report)
 
 ---
 
