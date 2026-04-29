@@ -2,7 +2,7 @@
   "name": "veilleur",
   "version": "0.1.0",
   "private": true,
-  "author": "marmelab",
+  "author": "YavaDeus",
   "scripts": {
     "dev": "next dev --port 7788",
     "build": "next build",
