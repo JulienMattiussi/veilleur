@@ -48,21 +48,24 @@ export function formatReport(
     groups.get(d)!.push(l);
   }
 
-  const footer =
-    links.length > config.report.maxLinksDisplayed
-      ? `\n*...et ${links.length - config.report.maxLinksDisplayed} autre(s) non affiché(s)*`
-      : "";
-
   let body = "";
   let index = 1;
+  let displayed = 0;
 
   for (const [d, groupLinks] of groups) {
     const groupHeader = `\n**${d}**`;
     const entries = groupLinks.map((l) => renderEntry(l, index++)).join("\n");
     const next = body + groupHeader + "\n" + entries;
-    if ((header + next + footer).length > config.report.maxMessageLength) break;
+    const remaining = links.length - displayed - groupLinks.length;
+    const nextFooter = remaining > 0 ? `\n*...et ${remaining} autre(s) non affiché(s)*` : "";
+    if ((header + next + nextFooter).length > config.report.maxMessageLength) break;
     body = next;
+    displayed += groupLinks.length;
   }
 
-  return (header + body + footer).trim();
+  const finalFooter = links.length - displayed > 0
+    ? `\n*...et ${links.length - displayed} autre(s) non affiché(s)*`
+    : "";
+
+  return (header + body + finalFooter).trim();
 }
