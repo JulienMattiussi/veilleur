@@ -18,8 +18,8 @@ export const config = {
     rateLimitRetries: 3,
   },
   report: {
-    // Max links displayed in a single Discord message
-    maxLinksDisplayed: 15,
+    // Links per page (Discord message pagination)
+    linksPerPage: 15,
     // Max links selectable for the curated list
     maxSelectedLinks: 6,
     // Discord message character limit (hard cap: 2000, we stay under)

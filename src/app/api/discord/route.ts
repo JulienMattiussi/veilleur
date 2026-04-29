@@ -13,6 +13,7 @@ const MESSAGE_COMPONENT = 3;
 const PONG = 1;
 const CHANNEL_MESSAGE_WITH_SOURCE = 4;
 const DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE = 5;
+const UPDATE_MESSAGE = 7;
 
 type InteractionOption = { name: string; value: unknown };
 
@@ -53,6 +54,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return handleSelectComponent(body);
   }
 
+  if (body.type === MESSAGE_COMPONENT && body.data?.custom_id?.startsWith("veille_page:")) {
+    return handlePageComponent(body);
+  }
+
   return NextResponse.json({
     type: CHANNEL_MESSAGE_WITH_SOURCE,
     data: { content: "Commande inconnue." },
@@ -81,6 +86,32 @@ async function handleSelectComponent(body: InteractionBody): Promise<NextRespons
   return NextResponse.json({
     type: CHANNEL_MESSAGE_WITH_SOURCE,
     data: { flags: 64, content: formatCuratedList(selectedLinks) },
+  });
+}
+
+async function handlePageComponent(body: InteractionBody): Promise<NextResponse> {
+  const parts = (body.data?.custom_id ?? "").split(":");
+  const channelId = parts[1] ?? "";
+  const period = parts[2] ?? "";
+  const page = parseInt(parts[3] ?? "0", 10);
+
+  const cached = await getCachedReport(channelId, period);
+  if (!cached) {
+    return NextResponse.json({
+      type: CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        flags: 64,
+        content: "Le rapport a expiré - relance `/veille` pour en générer un nouveau.",
+      },
+    });
+  }
+
+  return NextResponse.json({
+    type: UPDATE_MESSAGE,
+    data: {
+      content: formatReport(cached.links, period, periodLabel(period), page),
+      components: buildSelectComponents(cached.links, channelId, period, page),
+    },
   });
 }
 

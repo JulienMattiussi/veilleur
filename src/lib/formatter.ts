@@ -40,18 +40,26 @@ export function buildSelectComponents(
   links: SummarizedLink[],
   channelId: string,
   period: string,
+  page = 0,
 ): unknown[] {
-  const options = links.slice(0, 25).map((l, i) => {
+  const totalPages = Math.ceil(links.length / config.report.linksPerPage);
+  const pageLinks = links.slice(
+    page * config.report.linksPerPage,
+    (page + 1) * config.report.linksPerPage,
+  );
+
+  const options = pageLinks.map((l, i) => {
+    const absoluteIndex = page * config.report.linksPerPage + i;
     const label = getDisplayTitle(l).slice(0, 100);
     const date = new Date(l.timestamp).toLocaleDateString("fr-FR", {
       day: "numeric",
       month: "short",
     });
     const description = `${domain(l.url)} - ${date} (${l.author})`.slice(0, 100);
-    return { label, value: String(i), description };
+    return { label, value: String(absoluteIndex), description };
   });
 
-  return [
+  const components: unknown[] = [
     {
       type: 1, // ACTION_ROW
       components: [
@@ -66,6 +74,30 @@ export function buildSelectComponents(
       ],
     },
   ];
+
+  if (totalPages > 1) {
+    components.push({
+      type: 1, // ACTION_ROW
+      components: [
+        {
+          type: 2, // BUTTON
+          style: 2, // SECONDARY
+          label: "◀ Précédent",
+          custom_id: `veille_page:${channelId}:${period}:${page - 1}`,
+          disabled: page === 0,
+        },
+        {
+          type: 2,
+          style: 2,
+          label: "Suivant ▶",
+          custom_id: `veille_page:${channelId}:${period}:${page + 1}`,
+          disabled: page === totalPages - 1,
+        },
+      ],
+    });
+  }
+
+  return components;
 }
 
 export function formatCuratedList(links: SummarizedLink[]): string {
@@ -74,37 +106,39 @@ export function formatCuratedList(links: SummarizedLink[]): string {
   return `**Veille de ${month}**\n${lines}`;
 }
 
-export function formatReport(links: SummarizedLink[], period: string, periodLbl: string): string {
-  const visible = links.slice(0, config.report.maxLinksDisplayed);
-  const header = `**Veille - ${periodLbl}** - ${links.length} lien(s)\n`;
+export function formatReport(
+  links: SummarizedLink[],
+  period: string,
+  periodLbl: string,
+  page = 0,
+): string {
+  const totalPages = Math.ceil(links.length / config.report.linksPerPage);
+  const pageLinks = links.slice(
+    page * config.report.linksPerPage,
+    (page + 1) * config.report.linksPerPage,
+  );
 
-  // Group by domain, preserving order of first appearance
+  const pageLabel = totalPages > 1 ? ` - page ${page + 1}/${totalPages}` : "";
+  const header = `**Veille - ${periodLbl}**${pageLabel} - ${links.length} lien(s)\n`;
+
+  // Group by domain within the page, preserving order of first appearance
   const groups = new Map<string, SummarizedLink[]>();
-  for (const l of visible) {
+  for (const l of pageLinks) {
     const d = domain(l.url);
     if (!groups.has(d)) groups.set(d, []);
     groups.get(d)!.push(l);
   }
 
   let body = "";
-  let index = 1;
-  let displayed = 0;
+  let index = page * config.report.linksPerPage + 1;
 
   for (const [d, groupLinks] of groups) {
     const groupHeader = `\n**${d}**`;
     const entries = groupLinks.map((l) => renderEntry(l, index++)).join("\n");
     const next = body + groupHeader + "\n" + entries;
-    const remaining = links.length - displayed - groupLinks.length;
-    const nextFooter = remaining > 0 ? `\n*...et ${remaining} autre(s) non affiché(s)*` : "";
-    if ((header + next + nextFooter).length > config.report.maxMessageLength) break;
+    if ((header + next).length > config.report.maxMessageLength) break;
     body = next;
-    displayed += groupLinks.length;
   }
 
-  const finalFooter =
-    links.length - displayed > 0
-      ? `\n*...et ${links.length - displayed} autre(s) non affiché(s)*`
-      : "";
-
-  return (header + body + finalFooter).trim();
+  return (header + body).trim();
 }
