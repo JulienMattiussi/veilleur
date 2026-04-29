@@ -15,6 +15,7 @@ const IGNORED_DOMAINS = [
   "discord.gg",
   "tenor.com",
   "giphy.com",
+  "klipy.com",
   "media.discordapp.net",
   "cdn.discordapp.com",
 ];
