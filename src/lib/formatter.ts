@@ -1,6 +1,17 @@
 import type { SummarizedLink } from "@/lib/summarizer";
 
 const DISCORD_MAX_LENGTH = 1900;
+
+function shortTitle(url: string): string {
+  try {
+    const { hostname, pathname } = new URL(url);
+    const host = hostname.replace(/^www\./, "");
+    const first = pathname.split("/").filter(Boolean)[0];
+    return first ? `${host}/${first}` : host;
+  } catch {
+    return url.slice(0, 60);
+  }
+}
 const MAX_LINKS_DISPLAYED = 15;
 
 export function formatReport(
@@ -12,7 +23,12 @@ export function formatReport(
 
   const entries = links.slice(0, MAX_LINKS_DISPLAYED).map((l) => {
     const tags = l.tags.length > 0 ? " " + l.tags.map((t) => `\`${t}\``).join(" ") : "";
-    return `**[${l.title}](<${l.url}>)**\n${l.summary}${tags}`;
+    const description = l.summary || l.context;
+    const body = description ? `\n${description}` : "";
+    // When no title from Claude, derive a short one from the URL (hostname + first path segment)
+    const displayTitle =
+      l.title === l.url ? shortTitle(l.url) : l.title;
+    return `**[${displayTitle}](<${l.url}>)**${body}${tags}`;
   });
 
   const footer =

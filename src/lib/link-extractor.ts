@@ -5,6 +5,7 @@ export type ExtractedLink = {
   messageId: string;
   author: string;
   timestamp: string;
+  context: string;
 };
 
 const URL_REGEX = /https?:\/\/[^\s<>"']+/g;
@@ -37,11 +38,18 @@ export function extractLinks(messages: DiscordMessage[]): ExtractedLink[] {
       const url = raw.replace(/[.,;:!?)]+$/, "");
       if (seen.has(url) || isIgnored(url)) continue;
       seen.add(url);
+      const context = msg.content
+        .replace(URL_REGEX, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 200);
+
       links.push({
         url,
         messageId: msg.id,
         author: msg.author.username,
         timestamp: msg.timestamp,
+        context,
       });
     }
   }

@@ -1,4 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
 import type { ExtractedLink } from "@/lib/link-extractor";
 
 export type SummarizedLink = ExtractedLink & {
@@ -14,12 +13,20 @@ export type WatchReport = {
   links: SummarizedLink[];
 };
 
-const client = new Anthropic();
-
 export async function summarizeLinks(links: ExtractedLink[]): Promise<SummarizedLink[]> {
   if (links.length === 0) return [];
 
-  const urlList = links.map((l, i) => `${i + 1}. ${l.url}`).join("\n");
+  if (!process.env.ANTHROPIC_API_KEY) {
+    // Stub mode - returns links without summary until API key is configured
+    return links.map((link) => ({ ...link, title: link.url, summary: "", tags: [] }));
+  }
+
+  const { default: Anthropic } = await import("@anthropic-ai/sdk");
+  const client = new Anthropic();
+
+  const urlList = links
+    .map((l, i) => `${i + 1}. ${l.url}${l.context ? ` (contexte : ${l.context})` : ""}`)
+    .join("\n");
 
   const response = await client.messages.create({
     model: "claude-sonnet-4-6",

@@ -13,6 +13,16 @@ describe("extractLinks", () => {
     expect(links[0]!.url).toBe("https://example.com/article");
   });
 
+  it("captures the message text as context", () => {
+    const links = extractLinks([makeMessage("Great article on Rust: https://example.com")]);
+    expect(links[0]!.context).toBe("Great article on Rust:");
+  });
+
+  it("returns empty context when message has only a URL", () => {
+    const links = extractLinks([makeMessage("https://example.com")]);
+    expect(links[0]!.context).toBe("");
+  });
+
   it("deduplicates identical URLs across messages", () => {
     const msgs = [
       makeMessage("https://example.com", "1"),

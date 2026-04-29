@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyDiscordSignature, fetchAllMessagesInPeriod, editFollowUp } from "@/lib/discord";
 import { extractLinks } from "@/lib/link-extractor";
+import { summarizeLinks } from "@/lib/summarizer";
+import { getCachedReport, setCachedReport } from "@/lib/cache";
 import { parsePeriod, periodLabel } from "@/lib/period";
+import { formatReport } from "@/lib/formatter";
 
 const PING = 1;
 const APPLICATION_COMMAND = 2;
@@ -60,6 +63,12 @@ async function processVeilleCommand(body: InteractionBody): Promise<void> {
   }
 
   try {
+    const cached = await getCachedReport(channelId, period);
+    if (cached) {
+      await editFollowUp(application_id, token, formatReport(cached.links, period, periodLabel(period)));
+      return;
+    }
+
     const sinceDate = parsePeriod(period);
     const messages = await fetchAllMessagesInPeriod(channelId, sinceDate);
     const links = extractLinks(messages);
@@ -73,23 +82,18 @@ async function processVeilleCommand(body: InteractionBody): Promise<void> {
       return;
     }
 
-    const preview = links
-      .slice(0, 20)
-      .map((l, i) => `${i + 1}. ${l.url} *(${l.author})*`)
-      .join("\n");
+    const summarized = await summarizeLinks(links);
 
-    const content = [
-      `**${links.length} lien(s) trouvé(s)** sur les ${periodLabel(period)} :`,
-      "",
-      preview,
-      links.length > 20 ? `\n*...et ${links.length - 20} autres*` : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
+    await setCachedReport({
+      channelId,
+      period,
+      generatedAt: new Date().toISOString(),
+      links: summarized,
+    });
 
-    await editFollowUp(application_id, token, content);
+    await editFollowUp(application_id, token, formatReport(summarized, period, periodLabel(period)));
   } catch (err) {
     const message = err instanceof Error ? err.message : "erreur inconnue";
-    await editFollowUp(application_id, token, `Erreur lors de la lecture du canal : ${message}`);
+    await editFollowUp(application_id, token, `Erreur : ${message}`);
   }
 }
