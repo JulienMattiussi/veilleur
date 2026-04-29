@@ -1,4 +1,5 @@
 import type { DiscordMessage } from "@/lib/discord";
+import { config } from "@/lib/config";
 
 export type ExtractedLink = {
   url: string;
@@ -10,20 +11,12 @@ export type ExtractedLink = {
 
 const URL_REGEX = /https?:\/\/[^\s<>"']+/g;
 
-const IGNORED_DOMAINS = [
-  "discord.com",
-  "discord.gg",
-  "tenor.com",
-  "giphy.com",
-  "klipy.com",
-  "media.discordapp.net",
-  "cdn.discordapp.com",
-];
-
 function isIgnored(url: string): boolean {
   try {
     const { hostname } = new URL(url);
-    return IGNORED_DOMAINS.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`));
+    return config.ignoredDomains.some(
+      (domain) => hostname === domain || hostname.endsWith(`.${domain}`),
+    );
   } catch {
     return true;
   }

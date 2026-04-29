@@ -1,4 +1,13 @@
 export const config = {
+  ignoredDomains: [
+    "discord.com",
+    "discord.gg",
+    "tenor.com",
+    "giphy.com",
+    "klipy.com",
+    "media.discordapp.net",
+    "cdn.discordapp.com",
+  ],
   discord: {
     apiBase: "https://discord.com/api/v10",
     // Max pages fetched per /veille run (1 page = 100 messages)
