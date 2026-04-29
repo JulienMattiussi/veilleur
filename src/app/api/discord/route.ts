@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { verifyDiscordSignature, fetchAllMessagesInPeriod, editFollowUp } from "@/lib/discord";
 import { extractLinks } from "@/lib/link-extractor";
 import { summarizeLinks } from "@/lib/summarizer";
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   if (body.type === APPLICATION_COMMAND && body.data?.name === "veille") {
-    void processVeilleCommand(body);
+    after(processVeilleCommand(body));
     return NextResponse.json({ type: DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE, data: { flags: 64 } });
   }
 
