@@ -43,14 +43,13 @@ async function sleep(ms: number): Promise<void> {
 
 async function fetchPage(
   channelId: string,
-  param: "before" | "after",
-  snowflakeId: string,
+  beforeId: string,
   limit = 100,
 ): Promise<DiscordMessage[]> {
   const token = process.env.DISCORD_BOT_TOKEN;
   if (!token) throw new Error("DISCORD_BOT_TOKEN is not set");
 
-  const url = `${DISCORD_API}/channels/${channelId}/messages?${param}=${snowflakeId}&limit=${limit}`;
+  const url = `${DISCORD_API}/channels/${channelId}/messages?before=${beforeId}&limit=${limit}`;
 
   for (let attempt = 0; attempt < config.discord.rateLimitRetries; attempt++) {
     const res = await fetch(url, {
@@ -102,7 +101,7 @@ export async function fetchAllMessagesInPeriod(
 
   for (let page = 0; page < config.discord.maxPages; page++) {
     if (page > 0) await sleep(config.discord.pageDelayMs);
-    const batch = await fetchPage(channelId, "before", beforeId, 100);
+    const batch = await fetchPage(channelId, beforeId, 100);
     if (batch.length === 0) break;
 
     // Discard messages older than sinceDate and stop pagination

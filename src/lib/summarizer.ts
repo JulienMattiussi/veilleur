@@ -48,7 +48,11 @@ ${urlList}`,
     ],
   });
 
-  const text = response.content[0]?.type === "text" ? response.content[0].text : "[]";
+  const raw = response.content[0]?.type === "text" ? response.content[0].text : "[]";
+  const text = raw
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
 
   let parsed: Array<{ url: string; title: string; summary: string; tags: string[] }>;
   try {

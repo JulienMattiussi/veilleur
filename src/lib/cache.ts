@@ -2,7 +2,6 @@ import type { WatchReport } from "@/lib/summarizer";
 import { config } from "@/lib/config";
 
 declare global {
-  // eslint-disable-next-line no-var
   var _localStore: Map<string, string> | undefined;
 }
 

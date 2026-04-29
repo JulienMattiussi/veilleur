@@ -18,7 +18,8 @@ Le bot :
 2. Extrait les URLs (en ignorant les liens Discord, GIFs, CDN...)
 3. Récupère le contexte rédigé par l'auteur du message
 4. Résume et catégorise chaque lien avec Claude AI (si `ANTHROPIC_API_KEY` configurée)
-5. Répond en message éphémère - seul toi vois le résultat
+5. Répond en message éphémère avec la liste groupée par domaine - seul toi vois le résultat
+6. Un menu de sélection permet de choisir jusqu'à 6 liens et d'obtenir une liste curation prête à partager
 
 ## Stack
 

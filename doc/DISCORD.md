@@ -20,7 +20,9 @@ Under **OAuth2 -> URL Generator**, select:
 
 Copy the generated URL, open it in your browser, select your server, then click **Authorize**.
 
-> Note: seeing Veilleur in your server's **Integrations** tab only means the slash command is registered - it does NOT mean the bot is a member. The bot must be explicitly invited via this OAuth2 URL before it appears in the member list.
+> Note: seeing Veilleur in your server's **Integrations** tab only means the slash command is
+> registered - it does NOT mean the bot is a member. The bot must be explicitly invited via this
+> OAuth2 URL before it appears in the member list.
 
 ## 2b. Grant access to restricted channels
 
@@ -31,7 +33,8 @@ If a channel has role-restricted access, explicitly grant the bot permission:
 3. Enable **View Channel** + **Read Message History** (Voir les anciens messages)
 4. Save
 
-> "Read Message History" is required - "View Channel" alone only lets the bot see new messages, not fetch past ones.
+> "Read Message History" is required - "View Channel" alone only lets the bot see new messages,
+> not fetch past ones.
 
 ## 3. Configure your environment
 
@@ -73,7 +76,8 @@ https://xxxx.ngrok-free.app/api/discord
 
 Note: the `/api/discord` path is required - the bare domain will not work.
 
-Click **Save Changes**. Discord sends an automatic PING - if the URL is accepted (green check), the setup is complete.
+Click **Save Changes**. Discord sends an automatic PING - if the URL is accepted (green check),
+the setup is complete.
 
 **For production**, set the Vercel deployment URL instead:
 
@@ -87,4 +91,18 @@ https://your-project.vercel.app/api/discord
 /veille canal:#tech-watch période:7j
 ```
 
-The bot responds with an ephemeral deferred message (only you see it), processes the channel in the background, then edits the message with the synthesized reading list.
+The bot responds with an ephemeral deferred message (only you see it), then edits it with the
+synthesized reading list once processing is complete.
+
+The report groups links by domain, numbered, with date and author. A select menu at the bottom
+lets you pick up to 6 links to keep. After confirming your selection, the bot replies with a
+clean curated list:
+
+```
+Veille de avril 2026
+- [Link title](https://example.com)
+- [Another title](https://other.com)
+```
+
+> Reports are cached for 6 hours (requires Redis in production). Re-running `/veille` with the
+> same canal and period within that window returns the cached report instantly.
