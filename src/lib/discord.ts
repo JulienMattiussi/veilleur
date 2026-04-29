@@ -32,6 +32,10 @@ export type DiscordMessage = {
   author: { username: string };
 };
 
+async function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function fetchChannelMessages(
   channelId: string,
   after: string,
@@ -41,15 +45,26 @@ export async function fetchChannelMessages(
   if (!token) throw new Error("DISCORD_BOT_TOKEN is not set");
 
   const url = `${DISCORD_API}/channels/${channelId}/messages?after=${after}&limit=${limit}`;
-  const res = await fetch(url, {
-    headers: { Authorization: `Bot ${token}` },
-  });
 
-  if (!res.ok) {
-    throw new Error(`Discord API error: ${res.status} ${res.statusText}`);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bot ${token}` },
+    });
+
+    if (res.status === 429) {
+      const retryAfter = parseFloat(res.headers.get("retry-after") ?? "1");
+      await sleep(retryAfter * 1000);
+      continue;
+    }
+
+    if (!res.ok) {
+      throw new Error(`Discord API error: ${res.status} ${res.statusText}`);
+    }
+
+    return res.json() as Promise<DiscordMessage[]>;
   }
 
-  return res.json() as Promise<DiscordMessage[]>;
+  throw new Error("Discord API error: too many rate limit retries");
 }
 
 export async function editFollowUp(
