@@ -1,4 +1,5 @@
 import type { WatchReport } from "@/lib/summarizer";
+import { config } from "@/lib/config";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -37,15 +38,13 @@ export async function getCachedReport(
   return raw ? (JSON.parse(raw) as WatchReport) : null;
 }
 
-const REPORT_TTL_SECONDS = 60 * 60 * 6; // 6 hours
-
 export async function setCachedReport(report: WatchReport): Promise<void> {
   const key = reportKey(report.channelId, report.period);
   const raw = JSON.stringify(report);
   const redis = await getRedis();
 
   if (redis) {
-    await redis.set(key, raw, "EX", REPORT_TTL_SECONDS);
+    await redis.set(key, raw, "EX", config.report.cacheTtlSeconds);
     await redis.quit();
     return;
   }

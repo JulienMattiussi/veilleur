@@ -1,4 +1,5 @@
 import nacl from "tweetnacl";
+import { config } from "@/lib/config";
 
 export class DiscordVerificationError extends Error {
   constructor(message: string) {
@@ -23,7 +24,7 @@ export function verifyDiscordSignature(
   }
 }
 
-const DISCORD_API = "https://discord.com/api/v10";
+const DISCORD_API = config.discord.apiBase;
 
 export type DiscordMessage = {
   id: string;
@@ -46,7 +47,7 @@ export async function fetchChannelMessages(
 
   const url = `${DISCORD_API}/channels/${channelId}/messages?after=${after}&limit=${limit}`;
 
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < config.discord.rateLimitRetries; attempt++) {
     const res = await fetch(url, {
       headers: { Authorization: `Bot ${token}` },
     });
@@ -80,8 +81,6 @@ export async function editFollowUp(
   });
 }
 
-const MAX_PAGES = 5; // max 500 messages per run
-const PAGE_DELAY_MS = 400; // proactive delay between pages to avoid rate limits
 
 export async function fetchAllMessagesInPeriod(
   channelId: string,
@@ -95,8 +94,8 @@ export async function fetchAllMessagesInPeriod(
   const all: DiscordMessage[] = [];
   let lastId = afterId;
 
-  for (let page = 0; page < MAX_PAGES; page++) {
-    if (page > 0) await sleep(PAGE_DELAY_MS);
+  for (let page = 0; page < config.discord.maxPages; page++) {
+    if (page > 0) await sleep(config.discord.pageDelayMs);
     const batch = await fetchChannelMessages(channelId, lastId, 100);
     if (batch.length === 0) break;
     all.push(...batch);
