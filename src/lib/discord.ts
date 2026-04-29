@@ -37,15 +37,16 @@ async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function fetchChannelMessages(
+async function fetchPage(
   channelId: string,
-  after: string,
+  param: "before" | "after",
+  snowflakeId: string,
   limit = 100,
 ): Promise<DiscordMessage[]> {
   const token = process.env.DISCORD_BOT_TOKEN;
   if (!token) throw new Error("DISCORD_BOT_TOKEN is not set");
 
-  const url = `${DISCORD_API}/channels/${channelId}/messages?after=${after}&limit=${limit}`;
+  const url = `${DISCORD_API}/channels/${channelId}/messages?${param}=${snowflakeId}&limit=${limit}`;
 
   for (let attempt = 0; attempt < config.discord.rateLimitRetries; attempt++) {
     const res = await fetch(url, {
@@ -86,22 +87,30 @@ export async function fetchAllMessagesInPeriod(
   channelId: string,
   sinceDate: Date,
 ): Promise<DiscordMessage[]> {
-  // Discord snowflake: shift timestamp left by 22 bits and add Discord epoch (2015-01-01)
+  // Paginate backwards from now so recent messages are always captured first.
+  // Discord snowflake: shift timestamp left by 22 bits after subtracting Discord epoch (2015-01-01)
   const DISCORD_EPOCH = 1420070400000n;
-  const snowflake = (BigInt(sinceDate.getTime()) - DISCORD_EPOCH) << 22n;
-  const afterId = snowflake.toString();
+  const sinceSnowflake = (BigInt(sinceDate.getTime()) - DISCORD_EPOCH) << 22n;
+  const nowSnowflake = ((BigInt(Date.now()) - DISCORD_EPOCH) << 22n).toString();
 
   const all: DiscordMessage[] = [];
-  let lastId = afterId;
+  let beforeId = nowSnowflake;
 
   for (let page = 0; page < config.discord.maxPages; page++) {
     if (page > 0) await sleep(config.discord.pageDelayMs);
-    const batch = await fetchChannelMessages(channelId, lastId, 100);
+    const batch = await fetchPage(channelId, "before", beforeId, 100);
     if (batch.length === 0) break;
-    all.push(...batch);
-    lastId = batch[batch.length - 1]!.id;
+
+    // Discard messages older than sinceDate and stop pagination
+    const inRange = batch.filter((m) => BigInt(m.id) >= sinceSnowflake);
+    all.push(...inRange);
+
+    if (inRange.length < batch.length) break; // reached the start of the period
     if (batch.length < 100) break;
+
+    beforeId = batch[batch.length - 1]!.id; // oldest message in batch
   }
 
-  return all;
+  // Return in chronological order (oldest first)
+  return all.reverse();
 }
