@@ -4,7 +4,12 @@ import { extractLinks } from "@/lib/link-extractor";
 import { summarizeLinks } from "@/lib/summarizer";
 import { getCachedReport, setCachedReport, getBasket, setBasket, clearBasket } from "@/lib/cache";
 import { parsePeriod, periodLabel } from "@/lib/period";
-import { formatReportWithCount, buildSelectComponents, formatCuratedList } from "@/lib/formatter";
+import {
+  computePageStarts,
+  formatReportWithCount,
+  buildSelectComponents,
+  formatCuratedList,
+} from "@/lib/formatter";
 import { config } from "@/lib/config";
 
 const PING = 1;
@@ -86,29 +91,34 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 }
 
 async function handleSelectComponent(body: InteractionBody): Promise<NextResponse> {
-  const [, channelId, period] = (body.data?.custom_id ?? "").split(":");
+  const parts = (body.data?.custom_id ?? "").split(":");
+  const channelId = parts[1] ?? "";
+  const period = parts[2] ?? "";
+  const page = parseInt(parts[3] ?? "0", 10);
   const userId = getUserId(body);
   const newIndices = (body.data?.values ?? []).map(Number);
 
-  const cached = await getCachedReport(channelId ?? "", period ?? "");
+  const cached = await getCachedReport(channelId, period);
   if (!cached) return expiredResponse();
 
-  // Compute which page this selection comes from and replace only that page's entries
-  const page = Math.floor((newIndices[0] ?? 0) / config.report.linksPerPage);
-  const pageStart = page * config.report.linksPerPage;
-  const pageEnd = pageStart + config.report.linksPerPage;
+  const pageStarts = computePageStarts(cached.links, periodLabel(period));
+  const pageStart = pageStarts[page] ?? 0;
+  const pageEnd = pageStarts[page + 1] ?? cached.links.length;
 
-  const existing = await getBasket(channelId ?? "", period ?? "", userId);
+  const existing = await getBasket(channelId, period, userId);
   const kept = existing.filter((i) => i < pageStart || i >= pageEnd);
   const merged = [...kept, ...newIndices].slice(0, config.report.maxSelectedLinks);
 
-  await setBasket(channelId ?? "", period ?? "", userId, merged);
+  await setBasket(channelId, period, userId, merged);
 
+  const startIndex = pageStarts[page] ?? 0;
   const { content, renderedCount } = formatReportWithCount(
     cached.links,
-    period ?? "",
-    periodLabel(period ?? ""),
+    period,
+    periodLabel(period),
+    startIndex,
     page,
+    pageStarts.length,
   );
   return NextResponse.json({
     type: UPDATE_MESSAGE,
@@ -116,11 +126,12 @@ async function handleSelectComponent(body: InteractionBody): Promise<NextRespons
       content,
       components: buildSelectComponents(
         cached.links,
-        channelId ?? "",
-        period ?? "",
+        channelId,
+        period,
         page,
         merged.length,
         renderedCount,
+        pageStarts,
       ),
     },
   });
@@ -137,12 +148,16 @@ async function handlePageComponent(body: InteractionBody): Promise<NextResponse>
   if (!cached) return expiredResponse();
 
   const basket = await getBasket(channelId, period, userId);
+  const pageStarts = computePageStarts(cached.links, periodLabel(period));
+  const startIndex = pageStarts[page] ?? 0;
 
   const { content, renderedCount } = formatReportWithCount(
     cached.links,
     period,
     periodLabel(period),
+    startIndex,
     page,
+    pageStarts.length,
   );
   return NextResponse.json({
     type: UPDATE_MESSAGE,
@@ -155,6 +170,7 @@ async function handlePageComponent(body: InteractionBody): Promise<NextResponse>
         page,
         basket.length,
         renderedCount,
+        pageStarts,
       ),
     },
   });
@@ -199,16 +215,20 @@ async function processVeilleCommand(body: InteractionBody): Promise<void> {
   try {
     const cached = await getCachedReport(channelId, period);
     if (cached) {
-      const { content: cachedContent, renderedCount: cachedCount } = formatReportWithCount(
+      const pageStarts = computePageStarts(cached.links, periodLabel(period));
+      const { content, renderedCount } = formatReportWithCount(
         cached.links,
         period,
         periodLabel(period),
+        pageStarts[0] ?? 0,
+        0,
+        pageStarts.length,
       );
       await editFollowUp(
         application_id,
         token,
-        cachedContent,
-        buildSelectComponents(cached.links, channelId, period, 0, 0, cachedCount),
+        content,
+        buildSelectComponents(cached.links, channelId, period, 0, 0, renderedCount, pageStarts),
       );
       return;
     }
@@ -235,16 +255,20 @@ async function processVeilleCommand(body: InteractionBody): Promise<void> {
       links: summarized,
     });
 
-    const { content: freshContent, renderedCount: freshCount } = formatReportWithCount(
+    const pageStarts = computePageStarts(summarized, periodLabel(period));
+    const { content, renderedCount } = formatReportWithCount(
       summarized,
       period,
       periodLabel(period),
+      pageStarts[0] ?? 0,
+      0,
+      pageStarts.length,
     );
     await editFollowUp(
       application_id,
       token,
-      freshContent,
-      buildSelectComponents(summarized, channelId, period, 0, 0, freshCount),
+      content,
+      buildSelectComponents(summarized, channelId, period, 0, 0, renderedCount, pageStarts),
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : "erreur inconnue";

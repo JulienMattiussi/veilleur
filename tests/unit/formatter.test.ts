@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   formatReport,
   formatReportWithCount,
+  computePageStarts,
   buildSelectComponents,
   formatCuratedList,
 } from "@/lib/formatter";
@@ -159,10 +160,11 @@ describe("formatCuratedList", () => {
     expect(result).toMatch(/\*\*Veille de .+\*\*/);
   });
 
-  it("renders each link as a bullet", () => {
+  it("renders each link as a bullet with bold title and url", () => {
     const result = formatCuratedList(makeLinks(2));
-    expect(result).toContain("- [Article 1]");
-    expect(result).toContain("- [Article 2]");
+    expect(result).toContain("- **Article 1**");
+    expect(result).toContain("- **Article 2**");
+    expect(result).toContain("<https://example.com/article-1>");
   });
 
   it("includes summary when present", () => {
@@ -193,13 +195,30 @@ describe("formatCuratedList", () => {
 
 describe("formatReportWithCount", () => {
   it("returns renderedCount equal to number of links when all fit", () => {
-    const { renderedCount } = formatReportWithCount(makeLinks(3), "7j", "7 derniers jours");
+    const links = makeLinks(3);
+    const pageStarts = computePageStarts(links, "7 derniers jours");
+    const { renderedCount } = formatReportWithCount(
+      links,
+      "7j",
+      "7 derniers jours",
+      0,
+      0,
+      pageStarts.length,
+    );
     expect(renderedCount).toBe(3);
   });
 
   it("returns content identical to formatReport", () => {
     const links = makeLinks(5);
-    const { content } = formatReportWithCount(links, "7j", "7 derniers jours");
+    const pageStarts = computePageStarts(links, "7 derniers jours");
+    const { content } = formatReportWithCount(
+      links,
+      "7j",
+      "7 derniers jours",
+      0,
+      0,
+      pageStarts.length,
+    );
     expect(content).toBe(formatReport(links, "7j", "7 derniers jours"));
   });
 
@@ -207,9 +226,38 @@ describe("formatReportWithCount", () => {
     const shortMax = 200;
     const originalMax = config.report.maxMessageLength;
     config.report.maxMessageLength = shortMax;
-    const { renderedCount } = formatReportWithCount(makeLinks(10), "7j", "7 derniers jours");
+    const links = makeLinks(10);
+    const pageStarts = computePageStarts(links, "7 derniers jours");
+    const { renderedCount } = formatReportWithCount(
+      links,
+      "7j",
+      "7 derniers jours",
+      0,
+      0,
+      pageStarts.length,
+    );
     config.report.maxMessageLength = originalMax;
     expect(renderedCount).toBeGreaterThan(0);
     expect(renderedCount).toBeLessThan(10);
+  });
+
+  it("page 2 starts at the first link not shown on page 1", () => {
+    const shortMax = 200;
+    const originalMax = config.report.maxMessageLength;
+    config.report.maxMessageLength = shortMax;
+    const links = makeLinks(10);
+    const pageStarts = computePageStarts(links, "7 derniers jours");
+    // page 2 must start exactly where page 1 left off - no gap
+    const { renderedCount: p1Count } = formatReportWithCount(
+      links,
+      "7j",
+      "7 derniers jours",
+      pageStarts[0] ?? 0,
+      0,
+      pageStarts.length,
+    );
+    config.report.maxMessageLength = originalMax;
+    expect(pageStarts.length).toBeGreaterThan(1);
+    expect(pageStarts[1]).toBe(p1Count);
   });
 });

@@ -36,6 +36,61 @@ export function getDisplayTitle(l: SummarizedLink): string {
   return l.title === l.url ? shortTitle(l.url) : l.title;
 }
 
+function renderPageFrom(
+  links: SummarizedLink[],
+  startIndex: number,
+  header: string,
+): { body: string; renderedCount: number } {
+  const pageLinks = links.slice(startIndex, startIndex + config.report.linksPerPage);
+
+  const groups = new Map<string, SummarizedLink[]>();
+  for (const l of pageLinks) {
+    const d = domain(l.url);
+    if (!groups.has(d)) groups.set(d, []);
+    groups.get(d)!.push(l);
+  }
+
+  let body = "";
+  let index = startIndex + 1;
+  let renderedCount = 0;
+  let done = false;
+
+  for (const [d, groupLinks] of groups) {
+    if (done) break;
+    let addedInGroup = 0;
+    for (const l of groupLinks) {
+      const domainPrefix = addedInGroup === 0 ? `\n**${d}**\n` : "\n";
+      const candidate = body + domainPrefix + renderEntry(l, index);
+      if ((header + candidate).length > config.report.maxMessageLength) {
+        done = true;
+        break;
+      }
+      body = candidate;
+      addedInGroup++;
+      index++;
+      renderedCount++;
+    }
+  }
+
+  return { body, renderedCount };
+}
+
+// Returns the start index of each page, computed from the actual rendered size of each page.
+export function computePageStarts(links: SummarizedLink[], periodLbl: string): number[] {
+  const starts: number[] = [];
+  let i = 0;
+  // Use a header without the page label to avoid a chicken-and-egg dependency.
+  // The page label adds at most ~15 chars, well within the 100-char buffer below maxMessageLength.
+  const approxHeader = `**Veille - ${periodLbl}** - ${links.length} lien(s)\n`;
+  while (i < links.length) {
+    starts.push(i);
+    const { renderedCount } = renderPageFrom(links, i, approxHeader);
+    if (renderedCount === 0) break;
+    i += renderedCount;
+  }
+  return starts;
+}
+
 export function buildSelectComponents(
   links: SummarizedLink[],
   channelId: string,
@@ -43,17 +98,19 @@ export function buildSelectComponents(
   page = 0,
   basketCount = 0,
   renderedCount?: number,
+  pageStarts?: number[],
 ): unknown[] {
-  const totalPages = Math.ceil(links.length / config.report.linksPerPage);
-  const pageLinks = links.slice(
-    page * config.report.linksPerPage,
-    (page + 1) * config.report.linksPerPage,
+  const totalPages = pageStarts
+    ? pageStarts.length
+    : Math.ceil(links.length / config.report.linksPerPage);
+  const startIndex = pageStarts ? (pageStarts[page] ?? 0) : page * config.report.linksPerPage;
+  const visibleLinks = links.slice(
+    startIndex,
+    startIndex + (renderedCount ?? config.report.linksPerPage),
   );
 
-  const visibleLinks = renderedCount !== undefined ? pageLinks.slice(0, renderedCount) : pageLinks;
-
   const options = visibleLinks.map((l, i) => {
-    const absoluteIndex = page * config.report.linksPerPage + i;
+    const absoluteIndex = startIndex + i;
     const label = `${absoluteIndex + 1}. ${getDisplayTitle(l)}`.slice(0, 100);
     const date = new Date(l.timestamp).toLocaleDateString("fr-FR", {
       day: "numeric",
@@ -69,7 +126,7 @@ export function buildSelectComponents(
       components: [
         {
           type: 3, // STRING_SELECT
-          custom_id: `veille_select:${channelId}:${period}`,
+          custom_id: `veille_select:${channelId}:${period}:${page}`,
           placeholder: "Sélectionne les liens à garder",
           min_values: 1,
           max_values: Math.min(config.report.maxSelectedLinks, options.length),
@@ -123,7 +180,7 @@ export function formatCuratedList(links: SummarizedLink[]): string {
       const tags = l.tags.length > 0 ? " " + l.tags.map((t) => `\`${t}\``).join(" ") : "";
       const description = l.summary || l.context;
       const body = description ? `\n  ${description}` : "";
-      return `- [${getDisplayTitle(l)}](<${l.url}>)${body}${tags}`;
+      return `- **${getDisplayTitle(l)}** - <${l.url}>${body}${tags}`;
     })
     .join("\n");
   return `**Veille de ${month}**\n${lines}`;
@@ -133,47 +190,13 @@ export function formatReportWithCount(
   links: SummarizedLink[],
   period: string,
   periodLbl: string,
-  page = 0,
+  startIndex: number,
+  pageNumber: number,
+  totalPages: number,
 ): { content: string; renderedCount: number } {
-  const totalPages = Math.ceil(links.length / config.report.linksPerPage);
-  const pageLinks = links.slice(
-    page * config.report.linksPerPage,
-    (page + 1) * config.report.linksPerPage,
-  );
-
-  const pageLabel = totalPages > 1 ? ` - page ${page + 1}/${totalPages}` : "";
+  const pageLabel = totalPages > 1 ? ` - page ${pageNumber + 1}/${totalPages}` : "";
   const header = `**Veille - ${periodLbl}**${pageLabel} - ${links.length} lien(s)\n`;
-
-  // Group by domain within the page, preserving order of first appearance
-  const groups = new Map<string, SummarizedLink[]>();
-  for (const l of pageLinks) {
-    const d = domain(l.url);
-    if (!groups.has(d)) groups.set(d, []);
-    groups.get(d)!.push(l);
-  }
-
-  let body = "";
-  let index = page * config.report.linksPerPage + 1;
-  let renderedCount = 0;
-  let done = false;
-
-  for (const [d, groupLinks] of groups) {
-    if (done) break;
-    let addedInGroup = 0;
-    for (const l of groupLinks) {
-      const domainPrefix = addedInGroup === 0 ? `\n**${d}**\n` : "\n";
-      const candidate = body + domainPrefix + renderEntry(l, index);
-      if ((header + candidate).length > config.report.maxMessageLength) {
-        done = true;
-        break;
-      }
-      body = candidate;
-      addedInGroup++;
-      index++;
-      renderedCount++;
-    }
-  }
-
+  const { body, renderedCount } = renderPageFrom(links, startIndex, header);
   return { content: (header + body).trim(), renderedCount };
 }
 
@@ -183,5 +206,8 @@ export function formatReport(
   periodLbl: string,
   page = 0,
 ): string {
-  return formatReportWithCount(links, period, periodLbl, page).content;
+  const pageStarts = computePageStarts(links, periodLbl);
+  const startIndex = pageStarts[page] ?? 0;
+  const totalPages = pageStarts.length;
+  return formatReportWithCount(links, period, periodLbl, startIndex, page, totalPages).content;
 }
