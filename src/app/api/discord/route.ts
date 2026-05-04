@@ -195,7 +195,10 @@ async function handleValidateComponent(body: InteractionBody): Promise<NextRespo
 
   return NextResponse.json({
     type: CHANNEL_MESSAGE_WITH_SOURCE,
-    data: { flags: 64, content: formatCuratedList(selectedLinks) },
+    data: {
+      flags: 64,
+      content: formatCuratedList(selectedLinks, cached.headline),
+    },
   });
 }
 
@@ -246,13 +249,14 @@ async function processVeilleCommand(body: InteractionBody): Promise<void> {
       return;
     }
 
-    const summarized = await summarizeLinks(links);
+    const { headline, links: summarized } = await summarizeLinks(links);
 
     await setCachedReport({
       channelId,
       period,
       generatedAt: new Date().toISOString(),
       links: summarized,
+      headline,
     });
 
     const pageStarts = computePageStarts(summarized, periodLabel(period));

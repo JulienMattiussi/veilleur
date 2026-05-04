@@ -173,15 +173,15 @@ export function buildSelectComponents(
   return components;
 }
 
-export function formatCuratedList(links: SummarizedLink[]): string {
+export function formatCuratedList(links: SummarizedLink[], headline?: string): string {
   const month = new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-  const header = `**Veille de ${month}**`;
+  const title = headline ?? `Veille de ${month}`;
+  const header = `**${title}**`;
   const lines = links
     .map((l) => {
-      const tags = l.tags.length > 0 ? " " + l.tags.map((t) => `\`${t}\``).join(" ") : "";
-      const description = l.summary || l.context;
-      const body = description ? `\n  ${description}` : "";
-      return `- **${getDisplayTitle(l)}** - <${l.url}>${body}${tags}`;
+      const text = l.summary || l.context || getDisplayTitle(l);
+      const prefix = l.emoji ? `${l.emoji} ` : "";
+      return `- ${prefix}[${text}](${l.url})`;
     })
     .join("\n");
   // Discord copies rendered text (stripped of markdown), so provide a raw code block.

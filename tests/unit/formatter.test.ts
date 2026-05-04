@@ -19,6 +19,7 @@ function makeLink(i: number, domain = "example.com"): SummarizedLink {
     title: `Article ${i}`,
     summary: "",
     tags: [],
+    emoji: "",
   };
 }
 
@@ -155,46 +156,42 @@ describe("buildSelectComponents", () => {
 });
 
 describe("formatCuratedList", () => {
-  it("includes month and year in header", () => {
+  it("uses default headline when none provided", () => {
     const result = formatCuratedList(makeLinks(2));
     expect(result).toMatch(/\*\*Veille de .+\*\*/);
   });
 
-  it("renders each link as a bullet with bold title and url", () => {
-    const result = formatCuratedList(makeLinks(2));
-    expect(result).toContain("- **Article 1**");
-    expect(result).toContain("- **Article 2**");
-    expect(result).toContain("<https://example.com/article-1>");
+  it("uses provided headline", () => {
+    const result = formatCuratedList(makeLinks(2), "En mai, veille ce qu'il te plait");
+    expect(result).toContain("**En mai, veille ce qu'il te plait**");
   });
 
-  it("includes a code block for easy copy-paste", () => {
-    const result = formatCuratedList(makeLinks(2));
-    expect(result).toContain("```");
-  });
-
-  it("includes summary when present", () => {
-    const link = { ...makeLink(1), summary: "Un super article sur le sujet." };
+  it("renders each link as [text](url) bullet", () => {
+    const link = { ...makeLink(1), summary: "Un super article" };
     const result = formatCuratedList([link]);
-    expect(result).toContain("Un super article sur le sujet.");
-  });
-
-  it("includes tags when present", () => {
-    const link = { ...makeLink(1), tags: ["rust", "wasm"] };
-    const result = formatCuratedList([link]);
-    expect(result).toContain("`rust`");
-    expect(result).toContain("`wasm`");
+    expect(result).toContain("- [Un super article](https://example.com/article-1)");
   });
 
   it("falls back to context when summary is empty", () => {
     const link = { ...makeLink(1), summary: "", context: "Partagé dans #tech" };
     const result = formatCuratedList([link]);
-    expect(result).toContain("Partagé dans #tech");
+    expect(result).toContain("[Partagé dans #tech]");
   });
 
-  it("omits description line when both summary and context are empty", () => {
-    const result = formatCuratedList(makeLinks(1));
-    const lines = result.split("\n");
-    expect(lines.filter((l) => l.startsWith("  "))).toHaveLength(0);
+  it("falls back to display title when summary and context are empty", () => {
+    const result = formatCuratedList([makeLink(1)]);
+    expect(result).toContain("[Article 1]");
+  });
+
+  it("includes emoji before link when present", () => {
+    const link = { ...makeLink(1), summary: "Un article", emoji: ":traffic_light:" };
+    const result = formatCuratedList([link]);
+    expect(result).toContain("- :traffic_light: [Un article]");
+  });
+
+  it("includes a code block for easy copy-paste", () => {
+    const result = formatCuratedList(makeLinks(2));
+    expect(result).toContain("```");
   });
 });
 
