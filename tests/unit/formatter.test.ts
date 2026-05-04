@@ -166,10 +166,10 @@ describe("formatCuratedList", () => {
     expect(result).toContain("**En mai, veille ce qu'il te plait**");
   });
 
-  it("renders each link as [text](url) bullet", () => {
+  it("renders each link as emoji [text](url) bullet", () => {
     const link = { ...makeLink(1), summary: "Un super article" };
     const result = formatCuratedList([link]);
-    expect(result).toContain("- [Un super article](https://example.com/article-1)");
+    expect(result).toContain("[Un super article](https://example.com/article-1)");
   });
 
   it("falls back to context when summary is empty", () => {

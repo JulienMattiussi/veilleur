@@ -43,33 +43,20 @@ function renderPageFrom(
 ): { body: string; renderedCount: number } {
   const pageLinks = links.slice(startIndex, startIndex + config.report.linksPerPage);
 
-  const groups = new Map<string, SummarizedLink[]>();
-  for (const l of pageLinks) {
-    const d = domain(l.url);
-    if (!groups.has(d)) groups.set(d, []);
-    groups.get(d)!.push(l);
-  }
-
   let body = "";
   let index = startIndex + 1;
   let renderedCount = 0;
-  let done = false;
+  const seenDomains = new Set<string>();
 
-  for (const [d, groupLinks] of groups) {
-    if (done) break;
-    let addedInGroup = 0;
-    for (const l of groupLinks) {
-      const domainPrefix = addedInGroup === 0 ? `\n**${d}**\n` : "\n";
-      const candidate = body + domainPrefix + renderEntry(l, index);
-      if ((header + candidate).length > config.report.maxMessageLength) {
-        done = true;
-        break;
-      }
-      body = candidate;
-      addedInGroup++;
-      index++;
-      renderedCount++;
-    }
+  for (const l of pageLinks) {
+    const d = domain(l.url);
+    const domainPrefix = seenDomains.has(d) ? "\n" : `\n**${d}**\n`;
+    const candidate = body + domainPrefix + renderEntry(l, index);
+    if ((header + candidate).length > config.report.maxMessageLength) break;
+    body = candidate;
+    seenDomains.add(d);
+    index++;
+    renderedCount++;
   }
 
   return { body, renderedCount };
@@ -173,15 +160,30 @@ export function buildSelectComponents(
   return components;
 }
 
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/\*(.+?)\*/g, "$1")
+    .replace(/_(.+?)_/g, "$1")
+    .replace(/:[a-z0-9_+-]+:/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const LETTER_EMOJIS = "abcdefghijklmnopqrstuvwxyz"
+  .split("")
+  .map((c) => `:regional_indicator_${c}:`);
+
 export function formatCuratedList(links: SummarizedLink[], headline?: string): string {
   const month = new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
   const title = headline ?? `Veille de ${month}`;
   const header = `**${title}**`;
   const lines = links
-    .map((l) => {
-      const text = l.summary || l.context || getDisplayTitle(l);
-      const prefix = l.emoji ? `${l.emoji} ` : "";
-      return `- ${prefix}[${text}](${l.url})`;
+    .map((l, i) => {
+      const raw = l.summary || l.context || getDisplayTitle(l);
+      const text = stripMarkdown(raw);
+      const emoji = l.emoji || (LETTER_EMOJIS[i % LETTER_EMOJIS.length] ?? ":white_small_square:");
+      return `- ${emoji} [${text}](${l.url})`;
     })
     .join("\n");
   // Discord copies rendered text (stripped of markdown), so provide a raw code block.
