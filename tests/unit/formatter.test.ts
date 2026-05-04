@@ -110,6 +110,24 @@ describe("buildSelectComponents", () => {
     expect(options[0]?.value).toBe(String(config.report.linksPerPage));
   });
 
+  it("prefixes option labels with 1-based index on page 0", () => {
+    const components = buildSelectComponents(makeLinks(3), "ch1", "7j", 0) as Array<{
+      components: Array<{ options?: Array<{ label: string }> }>;
+    }>;
+    const options = components[0]?.components[0]?.options ?? [];
+    expect(options[0]?.label).toMatch(/^1\. /);
+    expect(options[2]?.label).toMatch(/^3\. /);
+  });
+
+  it("prefixes option labels with absolute 1-based index on page 1", () => {
+    const links = makeLinks(config.report.linksPerPage + 2);
+    const components = buildSelectComponents(links, "ch1", "7j", 1) as Array<{
+      components: Array<{ options?: Array<{ label: string }> }>;
+    }>;
+    const options = components[0]?.components[0]?.options ?? [];
+    expect(options[0]?.label).toMatch(new RegExp(`^${config.report.linksPerPage + 1}\\.`));
+  });
+
   it("disables Précédent on first page", () => {
     const links = makeLinks(config.report.linksPerPage + 1);
     const components = buildSelectComponents(links, "ch1", "7j", 0) as Array<{

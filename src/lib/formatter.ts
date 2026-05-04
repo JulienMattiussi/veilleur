@@ -51,7 +51,7 @@ export function buildSelectComponents(
 
   const options = pageLinks.map((l, i) => {
     const absoluteIndex = page * config.report.linksPerPage + i;
-    const label = getDisplayTitle(l).slice(0, 100);
+    const label = `${absoluteIndex + 1}. ${getDisplayTitle(l)}`.slice(0, 100);
     const date = new Date(l.timestamp).toLocaleDateString("fr-FR", {
       day: "numeric",
       month: "short",
