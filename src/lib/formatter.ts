@@ -42,6 +42,7 @@ export function buildSelectComponents(
   period: string,
   page = 0,
   basketCount = 0,
+  renderedCount?: number,
 ): unknown[] {
   const totalPages = Math.ceil(links.length / config.report.linksPerPage);
   const pageLinks = links.slice(
@@ -49,7 +50,9 @@ export function buildSelectComponents(
     (page + 1) * config.report.linksPerPage,
   );
 
-  const options = pageLinks.map((l, i) => {
+  const visibleLinks = renderedCount !== undefined ? pageLinks.slice(0, renderedCount) : pageLinks;
+
+  const options = visibleLinks.map((l, i) => {
     const absoluteIndex = page * config.report.linksPerPage + i;
     const label = `${absoluteIndex + 1}. ${getDisplayTitle(l)}`.slice(0, 100);
     const date = new Date(l.timestamp).toLocaleDateString("fr-FR", {
@@ -118,19 +121,20 @@ export function formatCuratedList(links: SummarizedLink[]): string {
   const lines = links
     .map((l) => {
       const tags = l.tags.length > 0 ? " " + l.tags.map((t) => `\`${t}\``).join(" ") : "";
-      const summary = l.summary ? `\n  ${l.summary}` : "";
-      return `- [${getDisplayTitle(l)}](<${l.url}>)${summary}${tags}`;
+      const description = l.summary || l.context;
+      const body = description ? `\n  ${description}` : "";
+      return `- [${getDisplayTitle(l)}](<${l.url}>)${body}${tags}`;
     })
     .join("\n");
   return `**Veille de ${month}**\n${lines}`;
 }
 
-export function formatReport(
+export function formatReportWithCount(
   links: SummarizedLink[],
   period: string,
   periodLbl: string,
   page = 0,
-): string {
+): { content: string; renderedCount: number } {
   const totalPages = Math.ceil(links.length / config.report.linksPerPage);
   const pageLinks = links.slice(
     page * config.report.linksPerPage,
@@ -150,14 +154,34 @@ export function formatReport(
 
   let body = "";
   let index = page * config.report.linksPerPage + 1;
+  let renderedCount = 0;
+  let done = false;
 
   for (const [d, groupLinks] of groups) {
-    const groupHeader = `\n**${d}**`;
-    const entries = groupLinks.map((l) => renderEntry(l, index++)).join("\n");
-    const next = body + groupHeader + "\n" + entries;
-    if ((header + next).length > config.report.maxMessageLength) break;
-    body = next;
+    if (done) break;
+    let addedInGroup = 0;
+    for (const l of groupLinks) {
+      const domainPrefix = addedInGroup === 0 ? `\n**${d}**\n` : "\n";
+      const candidate = body + domainPrefix + renderEntry(l, index);
+      if ((header + candidate).length > config.report.maxMessageLength) {
+        done = true;
+        break;
+      }
+      body = candidate;
+      addedInGroup++;
+      index++;
+      renderedCount++;
+    }
   }
 
-  return (header + body).trim();
+  return { content: (header + body).trim(), renderedCount };
+}
+
+export function formatReport(
+  links: SummarizedLink[],
+  period: string,
+  periodLbl: string,
+  page = 0,
+): string {
+  return formatReportWithCount(links, period, periodLbl, page).content;
 }

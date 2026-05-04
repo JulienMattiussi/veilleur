@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { formatReport, buildSelectComponents, formatCuratedList } from "@/lib/formatter";
+import {
+  formatReport,
+  formatReportWithCount,
+  buildSelectComponents,
+  formatCuratedList,
+} from "@/lib/formatter";
 import type { SummarizedLink } from "@/lib/summarizer";
 import { config } from "@/lib/config";
 
@@ -173,9 +178,38 @@ describe("formatCuratedList", () => {
     expect(result).toContain("`wasm`");
   });
 
-  it("omits summary line when summary is empty", () => {
+  it("falls back to context when summary is empty", () => {
+    const link = { ...makeLink(1), summary: "", context: "Partagé dans #tech" };
+    const result = formatCuratedList([link]);
+    expect(result).toContain("Partagé dans #tech");
+  });
+
+  it("omits description line when both summary and context are empty", () => {
     const result = formatCuratedList(makeLinks(1));
     const lines = result.split("\n");
     expect(lines.filter((l) => l.startsWith("  "))).toHaveLength(0);
+  });
+});
+
+describe("formatReportWithCount", () => {
+  it("returns renderedCount equal to number of links when all fit", () => {
+    const { renderedCount } = formatReportWithCount(makeLinks(3), "7j", "7 derniers jours");
+    expect(renderedCount).toBe(3);
+  });
+
+  it("returns content identical to formatReport", () => {
+    const links = makeLinks(5);
+    const { content } = formatReportWithCount(links, "7j", "7 derniers jours");
+    expect(content).toBe(formatReport(links, "7j", "7 derniers jours"));
+  });
+
+  it("limits renderedCount when maxMessageLength is exceeded", () => {
+    const shortMax = 200;
+    const originalMax = config.report.maxMessageLength;
+    config.report.maxMessageLength = shortMax;
+    const { renderedCount } = formatReportWithCount(makeLinks(10), "7j", "7 derniers jours");
+    config.report.maxMessageLength = originalMax;
+    expect(renderedCount).toBeGreaterThan(0);
+    expect(renderedCount).toBeLessThan(10);
   });
 });

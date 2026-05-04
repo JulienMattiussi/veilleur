@@ -4,7 +4,7 @@ import { extractLinks } from "@/lib/link-extractor";
 import { summarizeLinks } from "@/lib/summarizer";
 import { getCachedReport, setCachedReport, getBasket, setBasket, clearBasket } from "@/lib/cache";
 import { parsePeriod, periodLabel } from "@/lib/period";
-import { formatReport, buildSelectComponents, formatCuratedList } from "@/lib/formatter";
+import { formatReportWithCount, buildSelectComponents, formatCuratedList } from "@/lib/formatter";
 import { config } from "@/lib/config";
 
 const PING = 1;
@@ -104,16 +104,23 @@ async function handleSelectComponent(body: InteractionBody): Promise<NextRespons
 
   await setBasket(channelId ?? "", period ?? "", userId, merged);
 
+  const { content, renderedCount } = formatReportWithCount(
+    cached.links,
+    period ?? "",
+    periodLabel(period ?? ""),
+    page,
+  );
   return NextResponse.json({
     type: UPDATE_MESSAGE,
     data: {
-      content: formatReport(cached.links, period ?? "", periodLabel(period ?? ""), page),
+      content,
       components: buildSelectComponents(
         cached.links,
         channelId ?? "",
         period ?? "",
         page,
         merged.length,
+        renderedCount,
       ),
     },
   });
@@ -131,11 +138,24 @@ async function handlePageComponent(body: InteractionBody): Promise<NextResponse>
 
   const basket = await getBasket(channelId, period, userId);
 
+  const { content, renderedCount } = formatReportWithCount(
+    cached.links,
+    period,
+    periodLabel(period),
+    page,
+  );
   return NextResponse.json({
     type: UPDATE_MESSAGE,
     data: {
-      content: formatReport(cached.links, period, periodLabel(period), page),
-      components: buildSelectComponents(cached.links, channelId, period, page, basket.length),
+      content,
+      components: buildSelectComponents(
+        cached.links,
+        channelId,
+        period,
+        page,
+        basket.length,
+        renderedCount,
+      ),
     },
   });
 }
@@ -179,11 +199,16 @@ async function processVeilleCommand(body: InteractionBody): Promise<void> {
   try {
     const cached = await getCachedReport(channelId, period);
     if (cached) {
+      const { content: cachedContent, renderedCount: cachedCount } = formatReportWithCount(
+        cached.links,
+        period,
+        periodLabel(period),
+      );
       await editFollowUp(
         application_id,
         token,
-        formatReport(cached.links, period, periodLabel(period)),
-        buildSelectComponents(cached.links, channelId, period),
+        cachedContent,
+        buildSelectComponents(cached.links, channelId, period, 0, 0, cachedCount),
       );
       return;
     }
@@ -210,11 +235,16 @@ async function processVeilleCommand(body: InteractionBody): Promise<void> {
       links: summarized,
     });
 
+    const { content: freshContent, renderedCount: freshCount } = formatReportWithCount(
+      summarized,
+      period,
+      periodLabel(period),
+    );
     await editFollowUp(
       application_id,
       token,
-      formatReport(summarized, period, periodLabel(period)),
-      buildSelectComponents(summarized, channelId, period),
+      freshContent,
+      buildSelectComponents(summarized, channelId, period, 0, 0, freshCount),
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : "erreur inconnue";
