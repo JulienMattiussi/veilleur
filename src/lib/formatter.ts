@@ -166,6 +166,7 @@ function stripMarkdown(text: string): string {
     .replace(/\*(.+?)\*/g, "$1")
     .replace(/_(.+?)_/g, "$1")
     .replace(/:[a-z0-9_+-]+:/g, "")
+    .replace(/\p{Extended_Pictographic}/gu, "")
     .replace(/\s+/g, " ")
     .trim();
 }
