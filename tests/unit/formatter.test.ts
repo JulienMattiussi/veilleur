@@ -167,6 +167,11 @@ describe("formatCuratedList", () => {
     expect(result).toContain("<https://example.com/article-1>");
   });
 
+  it("includes a code block for easy copy-paste", () => {
+    const result = formatCuratedList(makeLinks(2));
+    expect(result).toContain("```");
+  });
+
   it("includes summary when present", () => {
     const link = { ...makeLink(1), summary: "Un super article sur le sujet." };
     const result = formatCuratedList([link]);

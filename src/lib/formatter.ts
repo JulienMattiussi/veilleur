@@ -79,9 +79,9 @@ function renderPageFrom(
 export function computePageStarts(links: SummarizedLink[], periodLbl: string): number[] {
   const starts: number[] = [];
   let i = 0;
-  // Use a header without the page label to avoid a chicken-and-egg dependency.
-  // The page label adds at most ~15 chars, well within the 100-char buffer below maxMessageLength.
-  const approxHeader = `**Veille - ${periodLbl}** - ${links.length} lien(s)\n`;
+  // Use a worst-case page label (" - page 99/99" = 14 chars) so renderedCount is never
+  // larger than what formatReportWithCount will actually render, avoiding cross-page duplicates.
+  const approxHeader = `**Veille - ${periodLbl}** - page 99/99 - ${links.length} lien(s)\n`;
   while (i < links.length) {
     starts.push(i);
     const { renderedCount } = renderPageFrom(links, i, approxHeader);
@@ -175,6 +175,7 @@ export function buildSelectComponents(
 
 export function formatCuratedList(links: SummarizedLink[]): string {
   const month = new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  const header = `**Veille de ${month}**`;
   const lines = links
     .map((l) => {
       const tags = l.tags.length > 0 ? " " + l.tags.map((t) => `\`${t}\``).join(" ") : "";
@@ -183,7 +184,11 @@ export function formatCuratedList(links: SummarizedLink[]): string {
       return `- **${getDisplayTitle(l)}** - <${l.url}>${body}${tags}`;
     })
     .join("\n");
-  return `**Veille de ${month}**\n${lines}`;
+  // Discord copies rendered text (stripped of markdown), so provide a raw code block.
+  // The copy button on the block gives raw markdown that renders correctly when pasted.
+  const copyBlock = `\`\`\`\n${header}\n${lines}\n\`\`\``;
+  const full = `${header}\n${lines}\n${copyBlock}`;
+  return full.length <= 1950 ? full : copyBlock;
 }
 
 export function formatReportWithCount(
