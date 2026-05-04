@@ -115,7 +115,13 @@ export function buildSelectComponents(
 
 export function formatCuratedList(links: SummarizedLink[]): string {
   const month = new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-  const lines = links.map((l) => `- [${getDisplayTitle(l)}](<${l.url}>)`).join("\n");
+  const lines = links
+    .map((l) => {
+      const tags = l.tags.length > 0 ? " " + l.tags.map((t) => `\`${t}\``).join(" ") : "";
+      const summary = l.summary ? `\n  ${l.summary}` : "";
+      return `- [${getDisplayTitle(l)}](<${l.url}>)${summary}${tags}`;
+    })
+    .join("\n");
   return `**Veille de ${month}**\n${lines}`;
 }
 

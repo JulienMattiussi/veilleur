@@ -141,4 +141,23 @@ describe("formatCuratedList", () => {
     expect(result).toContain("- [Article 1]");
     expect(result).toContain("- [Article 2]");
   });
+
+  it("includes summary when present", () => {
+    const link = { ...makeLink(1), summary: "Un super article sur le sujet." };
+    const result = formatCuratedList([link]);
+    expect(result).toContain("Un super article sur le sujet.");
+  });
+
+  it("includes tags when present", () => {
+    const link = { ...makeLink(1), tags: ["rust", "wasm"] };
+    const result = formatCuratedList([link]);
+    expect(result).toContain("`rust`");
+    expect(result).toContain("`wasm`");
+  });
+
+  it("omits summary line when summary is empty", () => {
+    const result = formatCuratedList(makeLinks(1));
+    const lines = result.split("\n");
+    expect(lines.filter((l) => l.startsWith("  "))).toHaveLength(0);
+  });
 });
