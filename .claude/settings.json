@@ -8,5 +8,8 @@
       "Bash(find *)",
       "Bash(ls *)"
     ]
+  },
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "0"
   }
 }
