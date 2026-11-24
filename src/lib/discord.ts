@@ -34,7 +34,7 @@ export type DiscordMessage = {
   id: string;
   content: string;
   timestamp: string;
-  author: { username: string };
+  author: { id: string; username: string; bot?: boolean };
 };
 
 async function sleep(ms: number): Promise<void> {
@@ -82,38 +82,56 @@ export async function editFollowUp(
   await fetch(url, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content, ...(components ? { components } : {}) }),
+    // Never ping anyone: reports quote user content that may contain mentions.
+    body: JSON.stringify({
+      content,
+      allowed_mentions: { parse: [] },
+      ...(components ? { components } : {}),
+    }),
   });
 }
 
+function toSnowflake(date: Date): bigint {
+  // Discord snowflake: shift timestamp left by 22 bits after subtracting Discord epoch (2015-01-01)
+  const DISCORD_EPOCH = 1420070400000n;
+  return (BigInt(date.getTime()) - DISCORD_EPOCH) << 22n;
+}
+
+export type FetchOptions = {
+  // End of the period (exclusive), defaults to now
+  until?: Date;
+  maxPages?: number;
+};
+
+// Returns the messages posted in [sinceDate, until), oldest first.
+// `truncated` is true when maxPages was reached before the start of the period.
 export async function fetchAllMessagesInPeriod(
   channelId: string,
   sinceDate: Date,
-): Promise<DiscordMessage[]> {
-  // Paginate backwards from now so recent messages are always captured first.
-  // Discord snowflake: shift timestamp left by 22 bits after subtracting Discord epoch (2015-01-01)
-  const DISCORD_EPOCH = 1420070400000n;
-  const sinceSnowflake = (BigInt(sinceDate.getTime()) - DISCORD_EPOCH) << 22n;
-  const nowSnowflake = ((BigInt(Date.now()) - DISCORD_EPOCH) << 22n).toString();
+  { until, maxPages = config.discord.maxPages }: FetchOptions = {},
+): Promise<{ messages: DiscordMessage[]; truncated: boolean }> {
+  // Paginate backwards from the end of the period so recent messages are always captured first.
+  const sinceSnowflake = toSnowflake(sinceDate);
+  const end = until && until.getTime() < Date.now() ? until : new Date();
 
   const all: DiscordMessage[] = [];
-  let beforeId = nowSnowflake;
+  let beforeId = toSnowflake(end).toString();
 
-  for (let page = 0; page < config.discord.maxPages; page++) {
+  for (let page = 0; page < maxPages; page++) {
     if (page > 0) await sleep(config.discord.pageDelayMs);
     const batch = await fetchPage(channelId, beforeId, 100);
-    if (batch.length === 0) break;
+    if (batch.length === 0) return { messages: all.reverse(), truncated: false };
 
     // Discard messages older than sinceDate and stop pagination
     const inRange = batch.filter((m) => BigInt(m.id) >= sinceSnowflake);
     all.push(...inRange);
 
-    if (inRange.length < batch.length) break; // reached the start of the period
-    if (batch.length < 100) break;
+    if (inRange.length < batch.length || batch.length < 100) {
+      return { messages: all.reverse(), truncated: false };
+    }
 
     beforeId = batch[batch.length - 1]!.id; // oldest message in batch
   }
 
-  // Return in chronological order (oldest first)
-  return all.reverse();
+  return { messages: all.reverse(), truncated: true };
 }

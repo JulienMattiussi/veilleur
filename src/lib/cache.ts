@@ -1,4 +1,5 @@
 import type { WatchReport } from "@/lib/summarizer";
+import type { StatsReport } from "@/lib/stats";
 import { config } from "@/lib/config";
 
 declare global {
@@ -16,6 +17,39 @@ async function getRedis() {
   return new Redis(process.env.REDIS_URL);
 }
 
+async function readJson<T>(key: string): Promise<T | null> {
+  const redis = await getRedis();
+  let raw: string | null | undefined;
+  if (redis) {
+    raw = await redis.get(key);
+    await redis.quit();
+  } else {
+    raw = getLocalStore().get(key);
+  }
+  return raw ? (JSON.parse(raw) as T) : null;
+}
+
+async function writeJson(key: string, value: unknown): Promise<void> {
+  const raw = JSON.stringify(value);
+  const redis = await getRedis();
+  if (redis) {
+    await redis.set(key, raw, "EX", config.report.cacheTtlSeconds);
+    await redis.quit();
+    return;
+  }
+  getLocalStore().set(key, raw);
+}
+
+async function deleteKey(key: string): Promise<void> {
+  const redis = await getRedis();
+  if (redis) {
+    await redis.del(key);
+    await redis.quit();
+    return;
+  }
+  getLocalStore().delete(key);
+}
+
 function reportKey(channelId: string, period: string): string {
   return `report:${channelId}:${period}`;
 }
@@ -24,35 +58,19 @@ function basketKey(channelId: string, period: string, userId: string): string {
   return `basket:${channelId}:${period}:${userId}`;
 }
 
+function statsKey(id: string): string {
+  return `stats:${id}`;
+}
+
 export async function getCachedReport(
   channelId: string,
   period: string,
 ): Promise<WatchReport | null> {
-  const key = reportKey(channelId, period);
-  const redis = await getRedis();
-
-  if (redis) {
-    const raw = await redis.get(key);
-    await redis.quit();
-    return raw ? (JSON.parse(raw) as WatchReport) : null;
-  }
-
-  const raw = getLocalStore().get(key);
-  return raw ? (JSON.parse(raw) as WatchReport) : null;
+  return readJson<WatchReport>(reportKey(channelId, period));
 }
 
 export async function setCachedReport(report: WatchReport): Promise<void> {
-  const key = reportKey(report.channelId, report.period);
-  const raw = JSON.stringify(report);
-  const redis = await getRedis();
-
-  if (redis) {
-    await redis.set(key, raw, "EX", config.report.cacheTtlSeconds);
-    await redis.quit();
-    return;
-  }
-
-  getLocalStore().set(key, raw);
+  await writeJson(reportKey(report.channelId, report.period), report);
 }
 
 export async function getBasket(
@@ -60,17 +78,7 @@ export async function getBasket(
   period: string,
   userId: string,
 ): Promise<number[]> {
-  const key = basketKey(channelId, period, userId);
-  const redis = await getRedis();
-
-  if (redis) {
-    const raw = await redis.get(key);
-    await redis.quit();
-    return raw ? (JSON.parse(raw) as number[]) : [];
-  }
-
-  const raw = getLocalStore().get(key);
-  return raw ? (JSON.parse(raw) as number[]) : [];
+  return (await readJson<number[]>(basketKey(channelId, period, userId))) ?? [];
 }
 
 export async function setBasket(
@@ -79,17 +87,7 @@ export async function setBasket(
   userId: string,
   indices: number[],
 ): Promise<void> {
-  const key = basketKey(channelId, period, userId);
-  const raw = JSON.stringify(indices);
-  const redis = await getRedis();
-
-  if (redis) {
-    await redis.set(key, raw, "EX", config.report.cacheTtlSeconds);
-    await redis.quit();
-    return;
-  }
-
-  getLocalStore().set(key, raw);
+  await writeJson(basketKey(channelId, period, userId), indices);
 }
 
 export async function clearBasket(
@@ -97,14 +95,13 @@ export async function clearBasket(
   period: string,
   userId: string,
 ): Promise<void> {
-  const key = basketKey(channelId, period, userId);
-  const redis = await getRedis();
+  await deleteKey(basketKey(channelId, period, userId));
+}
 
-  if (redis) {
-    await redis.del(key);
-    await redis.quit();
-    return;
-  }
+export async function getCachedStats(id: string): Promise<StatsReport | null> {
+  return readJson<StatsReport>(statsKey(id));
+}
 
-  getLocalStore().delete(key);
+export async function setCachedStats(report: StatsReport): Promise<void> {
+  await writeJson(statsKey(report.id), report);
 }

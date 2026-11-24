@@ -4,7 +4,8 @@
 
 Veilleur is a Discord bot for tech watch (veille informatique). It reads messages from a Discord
 channel over a given period, extracts shared links, and uses Claude AI to produce a categorized
-reading list.
+reading list (`/veille`). It also computes AI-free statistics on a channel: matching messages by
+author and/or term, top authors, top shared domains, with links to the messages (`/stats`).
 
 **Stack**: Next.js 16 · TypeScript strict · Anthropic Claude SDK · Discord REST API · Redis Cloud
 
@@ -59,6 +60,18 @@ Run `make check` (format-check + lint + typecheck + test-unit). All must pass.
 
 ---
 
+## Code layout
+
+- `src/app/api/discord/route.ts` - thin router: signature check, PING, dispatch by command name
+  and by `custom_id` prefix (`veille_`, `stats_`)
+- `src/commands/<name>.ts` - one module per slash command: background processing + component handlers
+- `src/lib/interactions.ts` - Discord interaction types, constants and response helpers
+- `src/lib/pagination.ts` - page splitting by rendered length + Previous/Next buttons, shared by
+  both reports
+- Pure logic stays in `src/lib/` (`stats.ts`, `stats-formatter.ts`, `date-range.ts`, `formatter.ts`...)
+
+---
+
 ## Discord integration
 
 ### Signature verification
@@ -74,7 +87,11 @@ All Discord webhook calls must be verified with `verifyDiscordSignature()` from 
 4. For `MESSAGE_COMPONENT` (`veille_select:*`): add selected indices to the user's basket, respond with `UPDATE_MESSAGE` (type 7) - updates the report message in place
 5. For `MESSAGE_COMPONENT` (`veille_page:*`): navigate to the requested page, respond with `UPDATE_MESSAGE` (type 7) - basket count is preserved in the Valider button
 6. For `MESSAGE_COMPONENT` (`veille_validate:*`): read basket, post curated list as `CHANNEL_MESSAGE_WITH_SOURCE` (type 4), clear basket
-7. All responses are ephemeral (flag 64) - only the invoking user sees the result
+7. For `APPLICATION_COMMAND` `/stats`: same deferred ephemeral pattern, processed with `after()`
+8. For `MESSAGE_COMPONENT` (`stats_page:<reportId>:<page>`): render the requested page of the cached
+   stats report, respond with `UPDATE_MESSAGE` (type 7)
+9. All responses are ephemeral (flag 64) - only the invoking user sees the result
+10. `editFollowUp()` sends `allowed_mentions: { parse: [] }`: reports quote user content and must never ping
 
 User ID is extracted from `body.member.user.id` (guild) or `body.user.id` (DM) to scope baskets per user.
 
@@ -82,12 +99,17 @@ User ID is extracted from `body.member.user.id` (guild) or `body.user.id` (DM) t
 
 - Use `fetchAllMessagesInPeriod()` from `src/lib/discord.ts`
 - Discord REST API: `GET /channels/{id}/messages?before={snowflake}&limit=100`
-- Paginate **backwards from now** (most recent first) - stops when a batch contains messages older than the period
+- Paginate **backwards from the end of the period** (`until`, defaults to now) - stops when a batch
+  contains messages older than the period
+- Capped at `maxPages` (100 messages each): `config.discord.maxPages` for `/veille`,
+  `config.stats.maxPages` for `/stats`; returns `{ messages, truncated }`
 - Snowflake conversion: `(timestamp_ms - 1420070400000) << 22`
 
 ### Registering commands
 
-Run once with `make discord-register` (requires env vars).
+Run `make discord-register` (requires env vars) after adding a command or changing its options.
+It overwrites the whole command set (`PUT`), so every command must be listed in
+`scripts/register-discord-command.ts`.
 
 ---
 
@@ -98,6 +120,19 @@ Run once with `make discord-register` (requires env vars).
 - Deduplicate across messages (first occurrence wins)
 - Ignore: `discord.com`, `discord.gg`, `tenor.com`, `giphy.com`, `klipy.com`, CDN domains
 - All extraction logic must be **pure functions**, no side effects
+
+---
+
+## Stats (`src/lib/stats.ts`, `src/lib/date-range.ts`, `src/lib/stats-formatter.ts`)
+
+- **No AI**: counting and filtering only, all pure functions
+- Options: `canal` (required), `début`, `fin`, `auteur` (USER), `terme`
+- Dates: `JJ/MM/AAAA` or `AAAA-MM-JJ`, interpreted in `config.stats.timeZone`; end date included,
+  defaults to today; start defaults to `config.stats.defaultDays` before the end
+- Term: case-insensitive substring; bot messages are ignored
+- Links counted once (first sharer), via `extractLinks()`
+- Page 0 is the summary, next pages list matching messages (most recent first) with jump links
+  `https://discord.com/channels/{guild}/{channel}/{message}`; user content is markdown-escaped
 
 ---
 
@@ -120,6 +155,7 @@ Run once with `make discord-register` (requires env vars).
 - **Redis is required in production**: without it the select menu always returns "rapport expiré" because each serverless invocation gets a fresh in-memory store
 - Report key: `report:{channelId}:{period}` - TTL 6 hours
 - Basket key: `basket:{channelId}:{period}:{userId}` - TTL 6 hours (same as report)
+- Stats key: `stats:{reportId}` (random id, carried in the page buttons) - TTL 6 hours
 
 ---
 
@@ -143,5 +179,5 @@ Run once with `make discord-register` (requires env vars).
 | `make dev`                 | Start dev server on port 7788                |
 | `make start` / `make stop` | Background server                            |
 | `make check`               | Full CI gate (format + lint + types + tests) |
-| `make discord-register`    | Register `/veille` slash command (run once)  |
+| `make discord-register`    | Register `/veille` and `/stats` commands     |
 | `make clean`               | Remove build artefacts                       |

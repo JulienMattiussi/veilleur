@@ -3,7 +3,12 @@ import { extractLinks } from "@/lib/link-extractor";
 import type { DiscordMessage } from "@/lib/discord";
 
 function makeMessage(content: string, id = "1"): DiscordMessage {
-  return { id, content, timestamp: "2024-01-01T00:00:00.000Z", author: { username: "testuser" } };
+  return {
+    id,
+    content,
+    timestamp: "2024-01-01T00:00:00.000Z",
+    author: { id: "u1", username: "testuser" },
+  };
 }
 
 describe("extractLinks", () => {
@@ -60,7 +65,7 @@ describe("extractLinks", () => {
       id: "42",
       content: "https://blog.example.com",
       timestamp: "2024-06-01T12:00:00.000Z",
-      author: { username: "alice" },
+      author: { id: "u2", username: "alice" },
     };
     const [link] = extractLinks([msg]);
     expect(link?.author).toBe("alice");

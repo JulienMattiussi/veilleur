@@ -4,7 +4,7 @@
 
 # Veilleur
 
-Bot Discord de veille technologique. Lance `/veille` dans un canal, il parcourt l'historique, extrait les liens partagés et génère une liste de lecture synthétique - visible uniquement par toi.
+Bot Discord de veille technologique. Lance `/veille` dans un canal, il parcourt l'historique, extrait les liens partagés et génère une liste de lecture synthétique - visible uniquement par toi. Lance `/stats` pour compter et retrouver les messages d'une période, par auteur ou par terme.
 
 ## Fonctionnement
 
@@ -21,6 +21,12 @@ Le bot :
 5. Répond en message éphémère avec la liste groupée par domaine - seul toi vois le résultat
 6. Un menu de sélection permet de choisir jusqu'à 6 liens et d'obtenir une liste curation prête à partager
 
+```
+/stats canal:#tech-watch début:01/09/2026 fin:30/09/2026 auteur:@alice terme:rust
+```
+
+Tout est optionnel sauf le canal (fin par défaut : aujourd'hui, début : 30 jours avant la fin). Le bot répond, sans IA, avec le nombre de messages correspondants, les occurrences du terme, le classement des auteurs et des domaines partagés, puis la liste paginée des messages avec un lien vers chacun.
+
 ## Stack
 
 - [Next.js 16](https://nextjs.org) - App Router, déployé sur Vercel
@@ -30,7 +36,7 @@ Le bot :
 
 ## Prérequis
 
-- Node.js 20+
+- Node.js 24 (voir `.nvmrc`)
 - Un serveur Discord avec les droits d'administration
 - Une application Discord (voir [doc/DISCORD.md](doc/DISCORD.md))
 - Une clé API Anthropic (optionnelle - le bot fonctionne sans, sans résumé IA)
@@ -42,7 +48,7 @@ git clone https://github.com/your-org/veilleur
 cd veilleur
 cp .env.example .env.local  # remplir les variables
 make install
-make discord-register       # enregistre la commande /veille (une seule fois)
+make discord-register       # enregistre les commandes /veille et /stats
 ```
 
 Variables d'environnement :

@@ -27,4 +27,16 @@ export const config = {
     // Cache TTL in seconds
     cacheTtlSeconds: 60 * 60 * 6, // 6 hours
   },
+  stats: {
+    // Max pages fetched per /stats run (1 page = 100 messages, ~0.5 s per page)
+    maxPages: 50,
+    // Period length when no start date is given
+    defaultDays: 30,
+    // Time zone used to interpret the dates typed by users
+    timeZone: "Europe/Paris",
+    // Number of entries in the top authors / top domains rankings
+    topCount: 10,
+    // Max length of the message excerpt shown in the list
+    excerptLength: 160,
+  },
 };

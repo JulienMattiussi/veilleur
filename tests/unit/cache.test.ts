@@ -1,5 +1,14 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { getCachedReport, setCachedReport, getBasket, setBasket, clearBasket } from "@/lib/cache";
+import {
+  getCachedReport,
+  setCachedReport,
+  getBasket,
+  setBasket,
+  clearBasket,
+  getCachedStats,
+  setCachedStats,
+} from "@/lib/cache";
+import type { StatsReport } from "@/lib/stats";
 
 beforeEach(() => {
   global._localStore = undefined;
@@ -56,5 +65,30 @@ describe("getBasket / setBasket / clearBasket", () => {
     await setBasket("ch1", "7j", "user1", [0, 1]);
     await setBasket("ch1", "7j", "user1", [5, 6]);
     expect(await getBasket("ch1", "7j", "user1")).toEqual([5, 6]);
+  });
+});
+
+describe("getCachedStats / setCachedStats", () => {
+  const stats: StatsReport = {
+    id: "abc123",
+    guildId: "g1",
+    channelId: "c1",
+    startLabel: "01/09/2026",
+    endLabel: "30/09/2026",
+    scannedCount: 0,
+    truncated: false,
+    messages: [],
+    termOccurrences: 0,
+    topAuthors: [],
+    topDomains: [],
+  };
+
+  it("returns null for an unknown id", async () => {
+    expect(await getCachedStats("nope")).toBeNull();
+  });
+
+  it("stores and retrieves a report by id", async () => {
+    await setCachedStats(stats);
+    expect(await getCachedStats("abc123")).toEqual(stats);
   });
 });

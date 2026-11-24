@@ -63,7 +63,7 @@ test-e2e-ui: ## Run e2e tests with Playwright UI
 
 # Discord
 
-discord-register: ## Register the /veille slash command with Discord (run once)
+discord-register: ## Register the /veille and /stats slash commands with Discord
 	set -a && . ./.env.local && set +a && npx tsx scripts/register-discord-command.ts
 
 # Maintenance

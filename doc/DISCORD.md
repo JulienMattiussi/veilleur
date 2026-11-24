@@ -49,13 +49,15 @@ cp .env.example .env.local
 make install
 ```
 
-## 5. Register the slash command
+## 5. Register the slash commands
 
 ```bash
 make discord-register
 ```
 
-The `/veille` command is registered globally (may take up to 1 hour to propagate).
+The `/veille` and `/stats` commands are registered globally (may take up to 1 hour to propagate).
+Run it again whenever a command is added or its options change: the script overwrites the whole
+command set.
 
 ## 6. Configure the Interactions Endpoint
 
@@ -112,3 +114,22 @@ Veille de avril 2026
 
 > Reports and baskets are cached for 6 hours (requires Redis in production). Re-running `/veille`
 > with the same canal and period within that window returns the cached report instantly.
+
+### `/stats`
+
+```
+/stats canal:#tech-watch début:01/09/2026 fin:30/09/2026 auteur:@alice terme:rust
+```
+
+Only `canal` is required. Dates accept `JJ/MM/AAAA` or `AAAA-MM-JJ` (Europe/Paris time); the end
+date is included, defaults to today, and the start date defaults to 30 days before the end date.
+The term is matched as a case-insensitive substring (`rust` also matches `trust`). Bot messages
+are ignored.
+
+The ephemeral answer starts with a summary (matching messages, term occurrences, top authors with
+their shared links, top shared domains), then the following pages list the matching messages,
+most recent first, each with a **voir** link to the message in the conversation.
+
+At most 5 000 messages are read per run (`config.stats.maxPages`): beyond that, the summary
+warns that only the end of the period is covered. Results are cached for 6 hours for page
+navigation; re-running `/stats` always reads Discord again.

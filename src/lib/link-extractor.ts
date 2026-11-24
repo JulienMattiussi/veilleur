@@ -9,7 +9,16 @@ export type ExtractedLink = {
   context: string;
 };
 
-const URL_REGEX = /https?:\/\/[^\s<>"']+/g;
+export const URL_REGEX = /https?:\/\/[^\s<>"']+/g;
+
+// Hostname without the "www." prefix, used to group and count links by site.
+export function domain(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "autre";
+  }
+}
 
 const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|webp|svg|bmp|ico|tiff?|avif)(\?.*)?$/i;
 

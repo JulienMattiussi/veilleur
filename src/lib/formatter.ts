@@ -1,13 +1,7 @@
 import type { SummarizedLink } from "@/lib/summarizer";
 import { config } from "@/lib/config";
-
-function domain(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return "autre";
-  }
-}
+import { domain } from "@/lib/link-extractor";
+import { computePageStarts as computeStarts, buildNavButtons } from "@/lib/pagination";
 
 function shortTitle(url: string): string {
   try {
@@ -64,18 +58,10 @@ function renderPageFrom(
 
 // Returns the start index of each page, computed from the actual rendered size of each page.
 export function computePageStarts(links: SummarizedLink[], periodLbl: string): number[] {
-  const starts: number[] = [];
-  let i = 0;
   // Use a worst-case page label (" - page 99/99" = 14 chars) so renderedCount is never
   // larger than what formatReportWithCount will actually render, avoiding cross-page duplicates.
   const approxHeader = `**Veille - ${periodLbl}** - page 99/99 - ${links.length} lien(s)\n`;
-  while (i < links.length) {
-    starts.push(i);
-    const { renderedCount } = renderPageFrom(links, i, approxHeader);
-    if (renderedCount === 0) break;
-    i += renderedCount;
-  }
-  return starts;
+  return computeStarts(links.length, (i) => renderPageFrom(links, i, approxHeader).renderedCount);
 }
 
 export function buildSelectComponents(
@@ -123,26 +109,11 @@ export function buildSelectComponents(
     },
   ];
 
-  const buttons: unknown[] = [];
-
-  if (totalPages > 1) {
-    buttons.push(
-      {
-        type: 2, // BUTTON
-        style: 2, // SECONDARY
-        label: "◀ Précédent",
-        custom_id: `veille_page:${channelId}:${period}:${page - 1}`,
-        disabled: page === 0,
-      },
-      {
-        type: 2,
-        style: 2,
-        label: "Suivant ▶",
-        custom_id: `veille_page:${channelId}:${period}:${page + 1}`,
-        disabled: page === totalPages - 1,
-      },
-    );
-  }
+  const buttons = buildNavButtons(
+    page,
+    totalPages,
+    (p) => `veille_page:${channelId}:${period}:${p}`,
+  );
 
   if (basketCount > 0) {
     buttons.push({
