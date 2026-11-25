@@ -34,8 +34,15 @@ export type DiscordMessage = {
   id: string;
   content: string;
   timestamp: string;
-  author: { id: string; username: string; bot?: boolean };
+  author: DiscordUser & { bot?: boolean };
 };
+
+export type DiscordUser = { id: string; username: string; global_name?: string | null };
+
+// Name shown in Discord (global display name), falling back to the unique username.
+export function displayName(user: Pick<DiscordUser, "username" | "global_name">): string {
+  return user.global_name || user.username;
+}
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

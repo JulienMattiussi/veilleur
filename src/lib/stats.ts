@@ -1,4 +1,4 @@
-import type { DiscordMessage } from "@/lib/discord";
+import { displayName, type DiscordMessage } from "@/lib/discord";
 import { extractLinks, domain } from "@/lib/link-extractor";
 import { config } from "@/lib/config";
 
@@ -92,7 +92,11 @@ export function computeStats(messages: DiscordMessage[], filters: StatsFilters):
 
   const authors = new Map<string, AuthorRank>();
   for (const m of matches) {
-    const entry = authors.get(m.author.id) ?? { name: m.author.username, messages: 0, links: 0 };
+    const entry = authors.get(m.author.id) ?? {
+      name: displayName(m.author),
+      messages: 0,
+      links: 0,
+    };
     entry.messages++;
     authors.set(m.author.id, entry);
   }
@@ -108,7 +112,7 @@ export function computeStats(messages: DiscordMessage[], filters: StatsFilters):
     messages: matches
       .map((m) => ({
         id: m.id,
-        author: m.author.username,
+        author: displayName(m.author),
         timestamp: m.timestamp,
         excerpt: makeExcerpt(m.content, term),
       }))

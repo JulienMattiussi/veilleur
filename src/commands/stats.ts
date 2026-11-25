@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { NextResponse } from "next/server";
-import { fetchAllMessagesInPeriod, editFollowUp } from "@/lib/discord";
+import { fetchAllMessagesInPeriod, editFollowUp, displayName } from "@/lib/discord";
 import { getCachedStats, setCachedStats } from "@/lib/cache";
 import { resolveDateRange } from "@/lib/date-range";
 import { computeStats, type StatsReport } from "@/lib/stats";
@@ -58,7 +58,7 @@ export async function processStatsCommand(body: InteractionBody): Promise<void> 
       guildId: body.guild_id ?? "@me",
       channelId,
       channelName: resolved?.channels?.[channelId]?.name,
-      authorName: authorId ? (author?.global_name ?? author?.username ?? authorId) : undefined,
+      authorName: authorId ? (author ? displayName(author) : authorId) : undefined,
       term,
       startLabel: range.startLabel,
       endLabel: range.endLabel,

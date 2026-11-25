@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { verifyDiscordSignature, fetchAllMessagesInPeriod } from "@/lib/discord";
+import { verifyDiscordSignature, fetchAllMessagesInPeriod, displayName } from "@/lib/discord";
 
 describe("verifyDiscordSignature", () => {
   it("returns false for garbage inputs", () => {
@@ -58,5 +58,16 @@ describe("fetchAllMessagesInPeriod", () => {
     );
     expect(messages).toHaveLength(100);
     expect(truncated).toBe(true);
+  });
+});
+
+describe("displayName", () => {
+  it("prefers the global display name", () => {
+    expect(displayName({ username: "anthony_r", global_name: "Anthony" })).toBe("Anthony");
+  });
+
+  it("falls back to the username", () => {
+    expect(displayName({ username: "anthony_r", global_name: null })).toBe("anthony_r");
+    expect(displayName({ username: "anthony_r" })).toBe("anthony_r");
   });
 });

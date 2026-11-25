@@ -1,4 +1,4 @@
-import type { DiscordMessage } from "@/lib/discord";
+import { displayName, type DiscordMessage } from "@/lib/discord";
 import { config } from "@/lib/config";
 
 export type ExtractedLink = {
@@ -49,7 +49,7 @@ export function extractLinks(messages: DiscordMessage[]): ExtractedLink[] {
       links.push({
         url,
         messageId: msg.id,
-        author: msg.author.username,
+        author: displayName(msg.author),
         timestamp: msg.timestamp,
         context,
       });
